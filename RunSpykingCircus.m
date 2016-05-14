@@ -1,129 +1,176 @@
+function [status,cmdout]=RunSpykingCircus(exportDir,exportFile,option)
+
+switch nargin
+    case 0
+        exportDir=cd;
+        %select most recent .dat file
+        exportFile=dir;
+        [~,fDateIdx]=sort([exportFile.datenum],'descend');
+        exportFile=exportFile(fDateIdx);
+        exportFile=exportFile(~cellfun('isempty',cellfun(@(x) strfind(x,'.dat'),...
+            {exportFile.name},'UniformOutput', false))).name;
+        option='runspkc';
+    case 2
+        option='runspkc';
+    case 3
+    otherwise
+        disp('missing argument for RunSpykingCircus')
+        return
+end
 
 %% declarations
-slash='\';
-scriptDir='C:\Anaconda\envs\spykc\Scripts';
-exportDir='PrV77_63_BR_16Ch';
-exportFile='PrV77_63_ManualStim_ContraBet_BR_16Ch_nopp';
-% load implant list and find probe file name
 userinfo=UserDirInfo;
-subjectName=regexp(strrep(handles.dname,'_','-'),'(?<=\\)\w+\d+','match');
-load([userinfo.probemap userinfo.slash 'ImplantList.mat']);
-probeID=implantList(~cellfun('isempty',...
-    strfind(strrep({implantList.Mouse},'-',''),subjectName{:}))).Probe;
-probeFile=['C:\\Users\\Vincent\\spyking-circus\\probes\\' probeID '.prb'];
+%environment path directories
+envDirs=[userinfo.envRootDir ';' userinfo.envScriptDir ';' userinfo.envLibDir];
 
 %% create parameter file
-status = system(['cd ' scriptDir ' &'...
-        'activate spykc &'...
-        'spyking-circus C:\Data\export\' ...
-        exportDir slash exportFile '.dat <C:\Code\yes.txt']); 
-    %  add ' &' to run in background outside Matlab
-
-fid  = fopen([exportFile '.params'],'r');
-params=fread(fid,'*char')';
-fclose(fid);
-delete([exportFile '.params'])
-
-%% replace parameters
-params = regexprep(params,'(?<=data_offset    = )\w+(?= )','0');
-params = regexprep(params,'(?<=mapping        = )\w+.\w+.\w+(?= )', probeFile);
-params = regexprep(params,'(?<=data_dtype     = )\w+(?= )','int16');
-params = regexprep(params,'(?<=dtype_offset   = )\w+(?= )','0');
-params = regexprep(params,'(?<=sampling_rate  = )\w+(?= )','30000');
-params = regexprep(params,'(?<=N_t            = )\w+(?= )','2');
-params = regexprep(params,'(?<=spike_thresh   = )\w+(?= )','7');
-params = regexprep(params,'(?<=peaks          = )\w+(?= )','both');
-params = regexprep(params,'(?<=remove_median  = )\w+(?= )','True');
-params = regexprep(params,'(?<=max_elts       = )\w+(?= )','20000');
-params = regexprep(params,'(?<=nclus_min      = )\w.\w+(?= )','0.0001');
-params = regexprep(params,'(?<=max_elts       = )\w+(?= )','20000');
-params = regexprep(params,'(?<=smart_search   = )\w+(?= )','0.01');
-params = regexprep(params,'(?<=noise_thr      = )\w.\w+(?= )','0.9');
-
-fid  = fopen([exportFile '.params'],'w');
-fprintf(fid,'%s',params);
-fclose(fid);
-
-% start MS-MPI
-!C:\Anaconda\Scripts\anaconda.bat & activate spykc & smpd -d 1 &
-
-%% run preview
-% doesn't work. Matlab don't get rights to run mpiexec properly
-status = system(['cd ' scriptDir ' &'...
-        'activate spykc &'...
-        'SETLOCAL &'...
-        'set PATH="C:\Anaconda\envs\spykc;C:\Anaconda\envs\spykc\Scripts;C:\Anaconda\envs\spykc\Library\bin;C:\Program Files\Microsoft MPI\Bin\;C:\Windows\system32;C:\Windows" &'...
-        'spyking-circus C:\Data\export\' ...
-        exportDir slash exportFile '.dat -p &']); 
+if strcmp(option,'paramsfile')
     
-%alternative 1
-% system('C:\Windows\System32\cmd.exe /k "C:\Anaconda\Scripts\anaconda.bat" ')
-% cd C:\Anaconda\envs\spykc\Scripts
-% activate spykc
-% spyking-circus C:\Data\export\PrV77_63_BR_16Ch\PrV77_63_ManualStim_ContraBet_BR_16Ch_nopp.dat -p
-
-%alternative 2
-%  !cd C:\Anaconda\envs\spykc\Scripts & activate spykc & spyking-circus C:\Data\export\PrV77_63_BR_16Ch\PrV77_63_ManualStim_ContraBet_BR_16Ch_nopp.dat -p
-
-%alternative 3
-% status = system(['runas /user:Vincent & cd ' scriptDir ' &'...
-%         'activate spykc &'...
-%         'spyking-circus C:\Data\export\' ...
-%         exportDir slash exportFile '.dat -p &']); 
-
-%% run process
-% works until fitting
-[status,cmdout] = system(['cd ' scriptDir ' &'...
-        'activate spykc &'...
-        'SETLOCAL &'...
-        'set PATH="C:\Anaconda\envs\spykc;C:\Anaconda\envs\spykc\Scripts;C:\Anaconda\envs\spykc\Library\bin;C:\Program Files\Microsoft MPI\Bin\;C:\Windows\system32;C:\Windows" &'...
-        'spyking-circus C:\Data\export\' ...
-        exportDir slash exportFile '.dat -m filtering,whitening,clustering -c 4']); 
-
-% finish fitting
-[status,cmdout] = system(['cd ' scriptDir ' &'...
-        'activate spykc &'...
-        'SETLOCAL &'...
-        'set PATH="C:\Anaconda\envs\spykc;C:\Anaconda\envs\spykc\Scripts;C:\Anaconda\envs\spykc\Library\bin;C:\Program Files\Microsoft MPI\Bin\;C:\Windows\system32;C:\Windows" &'...
-        'spyking-circus C:\Data\export\' ...
-        exportDir slash exportFile '.dat -m fitting']); 
-
-%tests on -maginefile vs -gmachinefile   
- 
-% !runas /user:Vincent & C:\Windows\System32\cmd.exe /k "C:\Anaconda\Scripts\anaconda.bat" &
-
-%this works!
-% !C:\Anaconda\Scripts\anaconda.bat & activate spykc & cd C:\Users\Vincent\spyking-circus & testbatch.bat & 
-% % testbatch.bat (ni C:\Users\Vincent\spyking-circus)
-%     % cd C:\Code
-%     % mpiexec -machinefile circus.hosts -np 2 hostname 
-% % circus.hosts (in C:\Code)
-%     % 10.122.169.230
+    % load implant list and find probe file name
+    subjectName=regexp(strrep(exportFile,'_','-'),'^\w+\d+(?=-)','match');
+    load([userinfo.probemap userinfo.slash 'ImplantList.mat']);
+    probeID=implantList(~cellfun('isempty',...
+        strfind(strrep({implantList.Mouse},'-',''),subjectName{:}))).Probe;
+    probeFile=['C:\\Users\\' userinfo.user '\\spyking-circus\\probes\\' probeID '.prb'];
     
-%tried the game of russian dolls further, with testbtach calls like:
-% cmd /c "C:\Anaconda\Scripts\anaconda.bat && cd C:\Code && activate spykc && mpiexec -gmachinefile circus.hosts -np 3 hostname"
-%or even better:
-% CMD /c "Runas /profile /user:setup_souris\vincent C:\Anaconda\Scripts\anaconda.bat && cd C:\Code && activate spykc && mpiexec -gmachinefile circus.hosts -np 3 hostname"
-% didn't work -> Unknown option: -gmachinefile (although -machinefile works)
+    if ~isdir(exportDir)
+        %move to export directory 
+        mkdir(exportDir);
+        cd(exportDir);
+    end
+    
+    if exist([exportFile '.params'],'file')==2
+        %remove pre-existing parameter file
+        delete([exportFile '.params'])
+    end
+    
+    % generate template params file
+    [status,cmdout] = system(['cd ' userinfo.envScriptDir ' &'...
+        'activate spykc &'...
+        'spyking-circus ' ...
+        exportDir userinfo.slash exportFile '.dat <' userinfo.ypipe ' &'...
+        'exit &']); %  final ' &' makes command run in background outside Matlab
+    
+    if status~=0
+        return
+    end
+    
+    % read parameters and delete file
+    fid  = fopen([exportFile '.params'],'r');
+    params=fread(fid,'*char')';
+    fclose(fid);
+    delete([exportFile '.params'])
+    
+    % replace parameters with user values
+    params = regexprep(params,'(?<=data_offset    = )\w+(?= )','0');
+    params = regexprep(params,'(?<=mapping        = )\w+.\w+.\w+(?= )', probeFile);
+    params = regexprep(params,'(?<=data_dtype     = )\w+(?= )','int16');
+    params = regexprep(params,'(?<=dtype_offset   = )\w+(?= )','0');
+    params = regexprep(params,'(?<=sampling_rate  = )\w+(?= )','30000');
+    params = regexprep(params,'(?<=N_t            = )\w+(?= )','2');
+    params = regexprep(params,'(?<=spike_thresh   = )\w+(?= )','7');
+    params = regexprep(params,'(?<=peaks          = )\w+(?= )','both');
+    params = regexprep(params,'(?<=remove_median  = )\w+(?= )','True');
+    params = regexprep(params,'(?<=max_elts       = )\w+(?= )','20000'); %20000 10000
+    params = regexprep(params,'(?<=nclus_min      = )\w.\w+(?= )','0.0001'); %0.0001 0.01
+    params = regexprep(params,'(?<=max_elts       = )\w+(?= )','20000'); %20000 10000
+    params = regexprep(params,'(?<=smart_search   = )\w+(?= )','0.01'); %0.01 0
+    params = regexprep(params,'(?<=noise_thr      = )\w.\w+(?= )','0.9');
+    
+    % write new params file
+    fid  = fopen([exportFile '.params'],'w');
+    fprintf(fid,'%s',params);
+    fclose(fid);
+    
+    cmdout='parameter file generated';
+end
 
-% but this works:
-% [status,cmdout] = system(['cd C:\Users\Vincent\spyking-circus &'...
-%         'activate spykc &'...
-%         'SETLOCAL &'...
-%         'set PATH="C:\Anaconda\envs\spykc;C:\Anaconda\envs\spykc\Scripts;C:\Anaconda\envs\spykc\Library\bin;C:\Program Files\Microsoft MPI\Bin\;C:\Windows\system32;C:\Windows" &'...
-%         '"C:\Program Files\Microsoft MPI\Bin\mpiexec.exe" -gmachinefile circus.hosts -np 3 hostname &']); 
+if strfind(option,'previewspkc')
+    % check MPI status and start if needed
+    checkMPIstatus(userinfo);
+    
+    %% run preview
+    system(['cd ' userinfo.envScriptDir ' &'...
+        'activate spykc &'...
+        'SETLOCAL &'...
+        'set PATH="' envDirs ';' userinfo.MPIDir ';' userinfo.WinDirs '" &'...
+        'spyking-circus ' ...
+        exportDir userinfo.slash exportFile '.dat -p &'...
+        'exit &']);
+end
 
+if strfind(option,'runspkc')
+    %% run process
+    % check MPI status and start if needed
+    checkMPIstatus(userinfo);
+    if ~isnan(str2double(option(end)))
+        NumCPU=['-c ' option(end)];
+    else
+        NumCPU='';
+    end
+    status=NaN;
+    [status,cmdout] = system(['cd ' userinfo.envScriptDir ' &'...
+        'activate spykc &'...
+        'SETLOCAL &'...
+        'set PATH="' envDirs ';' userinfo.MPIDir ';' userinfo.WinDirs '" &'...
+        'spyking-circus ' ...
+        exportDir userinfo.slash exportFile '.dat -m filtering,whitening,clustering ' NumCPU ' &'...
+        'exit'],'-echo');
+    
+    if status==0
+        % finish fitting
+        [status,cmdout] = system(['cd ' userinfo.envScriptDir ' &'...
+            'activate spykc &'...
+            'SETLOCAL &'...
+            'set PATH="' envDirs ';' userinfo.MPIDir ';' userinfo.WinDirs '" &'...
+            'spyking-circus ' ...
+            exportDir userinfo.slash exportFile '.dat -m fitting &'...
+            'exit &']);
+    else 
+        % try running on less stringent parameters and with less clusters
+    end
+end
 
 %% exporting
-[status,cmdout] = system(['cd ' scriptDir ' &'...
+if strfind(option,'exportspikes')
+    [status,cmdout] = system(['cd ' userinfo.envScriptDir ' &'...
         'activate spykc &'...
         'SETLOCAL &'...
-        'set PATH="C:\Anaconda\envs\spykc;C:\Anaconda\envs\spykc\Scripts;C:\Anaconda\envs\spykc\Library\bin;C:\Program Files\Microsoft MPI\Bin\;C:\Windows\system32;C:\Windows" &'...
-        'spyking-circus C:\Data\export\' ...
-        exportDir slash exportFile '.dat -m converting -c 4']); 
+        'set PATH="' envDirs ';' userinfo.MPIDir ';' userinfo.WinDirs '" &'...
+        'spyking-circus ' ...
+        exportDir userinfo.slash exportFile '.dat -m converting ' NumCPU ' &'...
+        'exit &']);
+end
 
 %% run GUI (no need for clusters here)
-status = system(['cd ' scriptDir ' &'...
-        'activate spykc &'...
-        'circus-gui-matlab C:\Data\export\' ...
-        exportDir slash exportFile '.dat']); 
+if strfind(option,'startGUI')
+    if strfind(option,'matlab')
+        [status,cmdout] = system(['cd ' userinfo.envScriptDir ' &'...
+            'activate spykc &'...
+            'circus-gui-matlab ' ...
+            exportDir userinfo.slash exportFile '.dat &'...
+            'exit &']);
+    elseif strfind(option,'python')
+        [status,cmdout] = system(['cd ' userinfo.envScriptDir ' &'...
+            'activate spykc &'...
+            'circus-gui-python ' ...
+            exportDir userinfo.slash exportFile '.dat &'...
+            'exit &']);
+    end
+end
+end
+
+function checkMPIstatus(userinfo)
+envDirs=[userinfo.envRootDir ';' userinfo.envScriptDir ';' userinfo.envLibDir];
+
+[MPIstatus,~] = system(['cd C:\Users\Vincent\spyking-circus &'...
+    'SETLOCAL &'...
+    'set PATH="' envDirs ';' userinfo.MPIDir ';' userinfo.WinDirs '" &'...
+    '"' userinfo.MPIDir 'mpiexec.exe" -gmachinefile circus.hosts hostname']);
+
+if MPIstatus==-1
+    system(['SETLOCAL &'...
+        'set PATH="' envDirs ';' userinfo.MPIDir ';' userinfo.WinDirs '" &'...
+        '"' userinfo.MPIDir 'smpd.exe" -d 1 &']);
+end
+end

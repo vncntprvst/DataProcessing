@@ -1,4 +1,10 @@
 function [status,cmdout]=RunSpykingCircus(exportDir,exportFile,option)
+% Run Spyking Circus from Matlab. 
+% (see http://spyking-circus.readthedocs.io/ for info)
+% Environement variables (defined in "userinfo" structure), as well as 
+% processing parameters ("userParams") need to be adjusted by user.
+% Runs on Windows 7, may require modifications on other platforms
+% Written by Vincent Prevosto, May 2016
 
 switch nargin
     case 0
@@ -25,64 +31,9 @@ envDirs=[userinfo.envRootDir ';' userinfo.envScriptDir ';' userinfo.envLibDir];
 
 %% create parameter file
 if strcmp(option,'paramsfile')
-    
-    % load implant list and find probe file name
-    subjectName=regexp(strrep(exportFile,'_','-'),'^\w+\d+(?=-)','match');
-    load([userinfo.probemap userinfo.slash 'ImplantList.mat']);
-    probeID=implantList(~cellfun('isempty',...
-        strfind(strrep({implantList.Mouse},'-',''),subjectName{:}))).Probe;
-    probeFile=['C:\\Users\\' userinfo.user '\\spyking-circus\\probes\\' probeID '.prb'];
-    
-    if ~isdir(exportDir)
-        %move to export directory 
-        mkdir(exportDir);
-        cd(exportDir);
-    end
-    
-    if exist([exportFile '.params'],'file')==2
-        %remove pre-existing parameter file
-        delete([exportFile '.params'])
-    end
-    
-    % generate template params file
-    [status,cmdout] = system(['cd ' userinfo.envScriptDir ' &'...
-        'activate spykc &'...
-        'spyking-circus ' ...
-        exportDir userinfo.slash exportFile '.dat <' userinfo.ypipe ' &'...
-        'exit &']); %  final ' &' makes command run in background outside Matlab
-    
-    if status~=0
-        return
-    end
-    
-    % read parameters and delete file
-    fid  = fopen([exportFile '.params'],'r');
-    params=fread(fid,'*char')';
-    fclose(fid);
-    delete([exportFile '.params'])
-    
-    % replace parameters with user values
-    params = regexprep(params,'(?<=data_offset    = )\w+(?= )','0');
-    params = regexprep(params,'(?<=mapping        = )\w+.\w+.\w+(?= )', probeFile);
-    params = regexprep(params,'(?<=data_dtype     = )\w+(?= )','int16');
-    params = regexprep(params,'(?<=dtype_offset   = )\w+(?= )','0');
-    params = regexprep(params,'(?<=sampling_rate  = )\w+(?= )','30000');
-    params = regexprep(params,'(?<=N_t            = )\w+(?= )','2');
-    params = regexprep(params,'(?<=spike_thresh   = )\w+(?= )','7');
-    params = regexprep(params,'(?<=peaks          = )\w+(?= )','both');
-    params = regexprep(params,'(?<=remove_median  = )\w+(?= )','True');
-    params = regexprep(params,'(?<=max_elts       = )\w+(?= )','20000'); %20000 10000
-    params = regexprep(params,'(?<=nclus_min      = )\w.\w+(?= )','0.0001'); %0.0001 0.01
-    params = regexprep(params,'(?<=max_elts       = )\w+(?= )','20000'); %20000 10000
-    params = regexprep(params,'(?<=smart_search   = )\w+(?= )','0.01'); %0.01 0
-    params = regexprep(params,'(?<=noise_thr      = )\w.\w+(?= )','0.9');
-    
-    % write new params file
-    fid  = fopen([exportFile '.params'],'w');
-    fprintf(fid,'%s',params);
-    fclose(fid);
-    
-    cmdout='parameter file generated';
+    userParams={'0','','int16','0','30000','2','7','both','True','20000',...
+        '0.0001','20000','0.01','0.9'};
+    [status,cmdout]=GenerateParamFile(exportFile,exportDir,userParams,userinfo);
 end
 
 if strfind(option,'previewspkc')
@@ -126,8 +77,33 @@ if strfind(option,'runspkc')
             'spyking-circus ' ...
             exportDir userinfo.slash exportFile '.dat -m fitting &'...
             'exit &']);
-    else 
+    else
         % try running on less stringent parameters and with less clusters
+        paramFReady=0;
+        while paramFReady==0
+            disp('generating less stringent parameter file');
+            userParams={'0','','int16','0','30000','2','7','both','True','10000',...
+                '0.01','10000','0','0.9'};
+            paramFReady=GenerateParamFile(exportFile,exportDir,userParams,userinfo);
+            pause(1) % give it 1 second
+        end
+        [status,cmdout] = system(['cd ' userinfo.envScriptDir ' &'...
+            'activate spykc &'...
+            'SETLOCAL &'...
+            'set PATH="' envDirs ';' userinfo.MPIDir ';' userinfo.WinDirs '" &'...
+            'spyking-circus ' ...
+            exportDir userinfo.slash exportFile '.dat -m filtering,whitening,clustering ' NumCPU ' &'...
+            'exit'],'-echo');
+        if status~=0 %if fails again
+            NumCPU=''; %no clusters
+            [status,cmdout] = system(['cd ' userinfo.envScriptDir ' &'...
+                'activate spykc &'...
+                'SETLOCAL &'...
+                'set PATH="' envDirs ';' userinfo.MPIDir ';' userinfo.WinDirs '" &'...
+                'spyking-circus ' ...
+                exportDir userinfo.slash exportFile '.dat -m filtering,whitening,clustering ' NumCPU ' &'...
+                'exit'],'-echo');
+        end
     end
 end
 

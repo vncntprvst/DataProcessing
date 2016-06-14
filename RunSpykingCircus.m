@@ -39,7 +39,7 @@ end
 if strfind(option,'previewspkc')
     % check MPI status and start if needed
     checkMPIstatus(userinfo);
-    
+    status=0;
     %% run preview
     system(['cd ' userinfo.envScriptDir ' &'...
         'activate spykc &'...

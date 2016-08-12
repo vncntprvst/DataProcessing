@@ -70,7 +70,17 @@ end
 if status~=0
     return
 end
-
+timerVal = tic;
+while ~exist([exportFile '.params'],'file')
+    disp('Writing generic parameter file')
+    timeElapsed=toc;
+    if timeElapsed>1
+        fprintf('%s ', '*'); 
+        disp('*')
+        timerVal = tic;
+    end
+end     
+    
 % read parameters and delete file
 fid  = fopen([exportFile '.params'],'r');
 dftParams=fread(fid,'*char')';

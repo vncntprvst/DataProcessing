@@ -50,6 +50,19 @@ if strfind(option,'previewspkc')
         'exit &']);
 end
 
+if strfind(option,'launcherGUI')
+    % check MPI status and start if needed
+    checkMPIstatus(userinfo);
+    status=0;
+    %% run preview
+    system(['cd ' userinfo.envScriptDir ' &'...
+        'activate spykc &'...
+        'SETLOCAL &'...
+        'set PATH="' envDirs ';' userinfo.MPIDir ';' userinfo.WinDirs '" &'...
+        'spyking-circus-launcher &'...
+        'exit &']);
+end
+
 if strfind(option,'runspkc')
     %% run process
     % check MPI status and start if needed
@@ -118,8 +131,8 @@ if strfind(option,'exportspikes')
         'exit &']);
 end
 
-%% run GUI (no need for clusters here)
-if strfind(option,'startGUI')
+%% run visualization GUI (no need for clusters here)
+if strfind(option,'startVisGUI')
     if strfind(option,'matlab')
         [status,cmdout] = system(['cd ' userinfo.envScriptDir ' &'...
             'activate spykc &'...

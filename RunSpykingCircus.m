@@ -32,7 +32,7 @@ envDirs=[userinfo.envRootDir ';' userinfo.envScriptDir ';' userinfo.envLibDir];
 %% create parameter file
 if strcmp(option,'paramsfile')
     userParams={'0','','int16','0','30000','2','7','both','True','20000',...
-        '0.0001','20000','0.01','0.9'};
+        '0.0001','20000','0.01','0.9','True'};
     [status,cmdout]=GenerateParamFile(exportFile,exportDir,userParams,userinfo);
 end
 
@@ -96,7 +96,7 @@ if strfind(option,'runspkc')
         while paramFReady==0
             disp('generating less stringent parameter file');
             userParams={'0','','int16','0','30000','2','7','both','True','10000',...
-                '0.01','10000','0','0.9'};
+                '0.01','10000','0','0.9','True'};
             paramFReady=GenerateParamFile(exportFile,exportDir,userParams,userinfo);
             pause(1) % give it 1 second
         end

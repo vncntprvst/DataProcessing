@@ -28,11 +28,11 @@ switch nargin
             {exportFile.name},'UniformOutput', false))).name;
         userinfo=UserDirInfo;
         userParams={'0','','int16','0','30000','2','7','both','True','20000',...
-            '0.0001','20000','0.01','0.9'};
+            '0.0001','20000','0.01','0.9','True'};
     case 2
         userinfo=UserDirInfo;
         userParams={'0','','int16','0','30000','2','7','both','True','20000',...
-            '0.0001','20000','0.01','0.9'};
+            '0.0001','20000','0.01','0.9','True'};
     case 3
         userinfo=UserDirInfo;
     case 4
@@ -70,14 +70,14 @@ end
 if status~=0
     return
 end
-timerVal = tic;
+tic;
+accuDelay=0;
+disp('Writing generic parameter file')
 while ~exist([exportFile '.params'],'file')
-    disp('Writing generic parameter file')
     timeElapsed=toc;
-    if timeElapsed>1
+    if timeElapsed-accuDelay>1
+       accuDelay=timeElapsed;
         fprintf('%s ', '*'); 
-        disp('*')
-        timerVal = tic;
     end
 end     
     
@@ -102,6 +102,7 @@ dftParams = regexprep(dftParams,'(?<=nclus_min      = )\w.\w+(?= )',userParams{1
 dftParams = regexprep(dftParams,'(?<=max_elts       = )\w+(?= )',userParams{12}); %20000 10000
 dftParams = regexprep(dftParams,'(?<=smart_search   = )\w+(?= )',userParams{13}); %0.01 0
 dftParams = regexprep(dftParams,'(?<=noise_thr      = )\w.\w+(?= )',userParams{14});
+dftParams = regexprep(dftParams,'(?<=correct_lag    = )\w+(?= )',userParams{15});
 
 % write new params file
 fid  = fopen([exportFile '.params'],'w');

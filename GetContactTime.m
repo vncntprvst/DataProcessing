@@ -67,23 +67,55 @@ if videoInput.Duration<(frameTimetable.frameTimes_ms(end)-frameTimetable.frameTi
 %     https://forum.videolan.org/viewtopic.php?t=78126
 %     https://wiki.videolan.org/VLC_command-line_help
     % see Processing Data doc file for instructions
-    return
+    dirlisting=dir(vDir);
+    if sum(~cellfun('isempty',cellfun(@(fname) strfind(fname,[videoFile(1:end-4) '_Fixed.avi']),...
+        {dirlisting.name},'UniformOutput',false)))
+    % alrady fixed the file
+        videoFile=dirlisting(~cellfun('isempty',cellfun(@(fname) strfind(fname,[videoFile(1:end-4) '_Fixed.avi']),...
+        {dirlisting.name},'UniformOutput',false))).name;
+    else
+        return
+    end
 end
 
 %% use Bonsai to extract frames
+exportVDir=[vDir cell2mat(regexp(videoFile,'^\w+(?=__)','match')) '__HSCamClips'];
 % try to automatize this step from command line
-%  batch processing: see musciaverage_csv_autonamed_v2
 % See Processing Data doc file for instructions, but basically, use
 % getHSVidTrials workflow.
 
 % [optional] rotate video frames to head-centered reference frame
 
-% find contact time
-% Bonsai: WhiskerContactTime (first frame is skipped, so line 1 in CSV file is frame #2)
+%% use Bonsai to find contact time
+% Bonsai: WhiskerContactTime (first frames are skipped, so line 1 in CSV file is frame #3)
 
-videoInput = VideoReader('C:\Data\Video\VidExports\PrV77_108__HSCamClips2.avi');
+%% Open result .csv file and export contact time points for alignment
+cd(exportVDir);
+exportVDirListing=dir(exportVDir);
+exportVDirListingNames={exportVDirListing.name};
+exportVDirListingNames=exportVDirListingNames(~cellfun('isempty',strfind(exportVDirListingNames,'csv')));
+
+delimiter = ' ';
+formatSpec = '%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%[^\n\r]';%4 "big" ROIs and 5 * small stacks of 3 ROI windows
+startRow = 1;
+
+for csvFile=1:size(exportVDirListingNames,2) 
+    %open file
+    fileID = fopen(exportVDirListingNames{csvFile},'r');
+    
+    % Read ROIs data
+    boolArray = textscan(fileID, formatSpec, 'Delimiter', delimiter,...
+        'MultipleDelimsAsOne', true, 'EmptyValue' ,NaN, 'ReturnOnError', false);
+    boolArray = strcmp([boolArray{1:end-1}],'True');
+    
+    %just for debugging purposes: frewind(fileID);
+    
+    % Close file.
+    fclose(fileID);
+    
+    %% analyze it
+
+end
 
 
 
-
-% export contact time points for alignment

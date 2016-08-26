@@ -98,7 +98,6 @@ exportVDirListingNames=exportVDirListingNames(~cellfun('isempty',strfind(exportV
 delimiter = ' ';
 formatSpec = '%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%[^\n\r]';%4 "big" ROIs and 5 * small stacks of 3 ROI windows
 startRow = 1;
-
 for csvFile=1:size(exportVDirListingNames,2) 
     %open file
     fileID = fopen(exportVDirListingNames{csvFile},'r');
@@ -114,6 +113,31 @@ for csvFile=1:size(exportVDirListingNames,2)
     fclose(fileID);
     
     %% analyze it
+    % make heatmap first
+%     figure; colormap(copper); %imagesc(boolArray);
+%     subplot(1,6,1)
+%     imagesc(fliplr(boolArray(1:300,1:4)));
+%     subplot(1,6,2)
+%     imagesc(boolArray(1:300,17:19));
+%     subplot(1,6,3)
+%     imagesc(boolArray(1:300,14:16));
+%     subplot(1,6,4)
+%     imagesc(boolArray(1:300,11:13));
+%     subplot(1,6,5)
+%     imagesc(boolArray(1:300,8:10));
+%     subplot(1,6,6)
+%     imagesc(boolArray(1:300,5:7));
+    %rules:
+%     * if upper activation, needs to have gone through lower or side first 
+%     -> whisker touch is when it went from lower to upper in order (may skip one?)
+%     * all full-column activation is disregarded, unless it's a fast, periodical
+%       input (define fast and periodic frequency)
+
+%from left to right
+boolArray(:,15) && ([true; boolArray(1:end-1,14)] || [true; boolArray(1:end-1,11)]) &&...
+ ([true; true; boolArray(1:end-2,13)] || [true; true; boolArray(1:end-2,10)]);
+
+
 
 end
 

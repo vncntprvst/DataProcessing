@@ -43,6 +43,9 @@ end
 
 % load implant list and find probe file name
 subjectName=regexp(strrep(exportFile,'_','-'),'^\w+\d+(?=-)','match');
+if isempty(subjectName) % different naming convention
+    subjectName=regexp(strrep(exportFile,'_','-'),'^\w+(?=-)','match');
+end
 load([userinfo.probemap userinfo.slash 'ImplantList.mat']);
 probeID=implantList(~cellfun('isempty',...
     strfind(strrep({implantList.Mouse},'-',''),subjectName{:}))).Probe;

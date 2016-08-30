@@ -31,8 +31,14 @@ envDirs=[userinfo.envRootDir ';' userinfo.envScriptDir ';' userinfo.envLibDir];
 
 %% create parameter file
 if strcmp(option,'paramsfile')
-    userParams={'0','','int16','0','30000','2','7','both','True','20000',...
-        '0.0001','20000','0.01','0.9','True'};
+    userParams={'0';'';'int16';'0';'30000';'2';'7';'both';'True';'20000';...
+        '0.0001';'20000';'0.01';'0.9';'True'};
+    parameterNames={'data_offset','mapping','data_dtype','dtype_offset','sampling_rate',...
+        'N_t','spike_thresh','peaks','remove_median','max_elts','nclus_min',...
+        'max_elts','smart_search','noise_thr','correct_lag'};
+    dlgTitle='Parameters file options';
+    numLines=1;
+    userParams=inputdlg(parameterNames,dlgTitle,numLines,userParams);
     [status,cmdout]=GenerateParamFile(exportFile,exportDir,userParams,userinfo);
 end
 

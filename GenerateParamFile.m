@@ -47,8 +47,13 @@ if isempty(subjectName) % different naming convention
     subjectName=regexp(strrep(exportFile,'_','-'),'^\w+(?=-)','match');
 end
 load([userinfo.probemap userinfo.slash 'ImplantList.mat']);
-probeID=implantList(~cellfun('isempty',...
-    strfind(strrep({implantList.Mouse},'-',''),subjectName{:}))).Probe;
+try
+    probeID=implantList(~cellfun('isempty',...
+        strfind(strrep({implantList.Mouse},'-',''),subjectName{:}))).Probe;
+catch
+    probeID=implantList(~cellfun('isempty',...
+        strfind(strrep({implantList.Mouse},'-',''),'default'))).Probe;
+end
 probeFile=['C:\\Users\\' userinfo.user '\\spyking-circus\\probes\\' probeID '.prb'];
 userParams{2}=probeFile;
 

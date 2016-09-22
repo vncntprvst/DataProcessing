@@ -27,12 +27,12 @@ switch nargin
         exportFile=exportFile(~cellfun('isempty',cellfun(@(x) strfind(x,'.dat'),...
             {exportFile.name},'UniformOutput', false))).name;
         userinfo=UserDirInfo;
-        userParams={'0','','int16','0','30000','2','7','both','True','20000',...
-            '0.0001','20000','0.01','0.9','True'};
+        userParams={'0';'';'int16';'0';'30000';'2';'8';'both';'True';'10000';...
+        '0.005';'True';'1';'1, 1';'0.9';'True'};
     case 2
         userinfo=UserDirInfo;
-        userParams={'0','','int16','0','30000','2','7','both','True','20000',...
-            '0.0001','20000','0.01','0.9','True'};
+        userParams={'0';'';'int16';'0';'30000';'2';'8';'both';'True';'10000';...
+        '0.005';'True';'1';'1, 1';'0.9';'True'};
     case 3
         userinfo=UserDirInfo;
     case 4
@@ -42,20 +42,22 @@ switch nargin
 end
 
 % load implant list and find probe file name
-subjectName=regexp(strrep(exportFile,'_','-'),'^\w+\d+(?=-)','match');
-if isempty(subjectName) % different naming convention
-    subjectName=regexp(strrep(exportFile,'_','-'),'^\w+(?=-)','match');
+if strcmp(userParams{2},'')
+    subjectName=regexp(strrep(exportFile,'_','-'),'^\w+\d+(?=-)','match');
+    if isempty(subjectName) % different naming convention
+        subjectName=regexp(strrep(exportFile,'_','-'),'^\w+(?=-)','match');
+    end
+    load([userinfo.probemap userinfo.slash 'ImplantList.mat']);
+    try
+        probeID=implantList(~cellfun('isempty',...
+            strfind(strrep({implantList.Mouse},'-',''),subjectName{:}))).Probe;
+    catch
+        probeID=implantList(~cellfun('isempty',...
+            strfind(strrep({implantList.Mouse},'-',''),'default'))).Probe;
+    end
+    probeFile=['C:\\Users\\' userinfo.user '\\spyking-circus\\probes\\' probeID '.prb'];
+    userParams{2}=probeFile;
 end
-load([userinfo.probemap userinfo.slash 'ImplantList.mat']);
-try
-    probeID=implantList(~cellfun('isempty',...
-        strfind(strrep({implantList.Mouse},'-',''),subjectName{:}))).Probe;
-catch
-    probeID=implantList(~cellfun('isempty',...
-        strfind(strrep({implantList.Mouse},'-',''),'default'))).Probe;
-end
-probeFile=['C:\\Users\\' userinfo.user '\\spyking-circus\\probes\\' probeID '.prb'];
-userParams{2}=probeFile;
 
 if ~isdir(exportDir)
     %move to export directory
@@ -107,10 +109,11 @@ dftParams = regexprep(dftParams,'(?<=peaks          = )\w+(?= )',userParams{8});
 dftParams = regexprep(dftParams,'(?<=remove_median  = )\w+(?= )',userParams{9});
 dftParams = regexprep(dftParams,'(?<=max_elts       = )\w+(?= )',userParams{10}); %20000 10000
 dftParams = regexprep(dftParams,'(?<=nclus_min      = )\w.\w+(?= )',userParams{11}); %0.0001 0.01
-dftParams = regexprep(dftParams,'(?<=max_elts       = )\w+(?= )',userParams{12}); %20000 10000
-dftParams = regexprep(dftParams,'(?<=smart_search   = )\w+(?= )',userParams{13}); %0.01 0
-dftParams = regexprep(dftParams,'(?<=noise_thr      = )\w.\w+(?= )',userParams{14});
-dftParams = regexprep(dftParams,'(?<=correct_lag    = )\w+(?= )',userParams{15});
+dftParams = regexprep(dftParams,'(?<=smart_search   = )\w+(?= )',userParams{12}); %0.01 0
+dftParams = regexprep(dftParams,'(?<=cc_merge       = )\w.\w+(?= )',userParams{13}); 
+dftParams = regexprep(dftParams,'(?<=dispersion     = \()\w+, \w+(?=\) )',userParams{14});
+dftParams = regexprep(dftParams,'(?<=noise_thr      = )\w.\w+(?= )',userParams{15});
+dftParams = regexprep(dftParams,'(?<=correct_lag    = )\w+(?= )',userParams{16});
 
 % write new params file
 fid  = fopen([exportFile '.params'],'w');

@@ -28,11 +28,11 @@ switch nargin
             {exportFile.name},'UniformOutput', false))).name;
         userinfo=UserDirInfo;
         userParams={'0';'';'int16';'0';'30000';'2';'8';'both';'True';'10000';...
-        '0.005';'True';'1';'1, 1';'0.9';'True'};
+        '0.005';'True';'1';'5, 5';'0.9';'True'};
     case 2
         userinfo=UserDirInfo;
         userParams={'0';'';'int16';'0';'30000';'2';'8';'both';'True';'10000';...
-        '0.005';'True';'1';'1, 1';'0.9';'True'};
+        '0.005';'True';'1';'5, 5';'0.9';'True'};
     case 3
         userinfo=UserDirInfo;
     case 4

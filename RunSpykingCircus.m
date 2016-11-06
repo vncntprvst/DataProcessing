@@ -30,15 +30,17 @@ userinfo=UserDirInfo;
 envDirs=[userinfo.envRootDir ';' userinfo.envScriptDir ';' userinfo.envLibDir];
 
 %% create parameter file
-if strcmp(option,'paramsfile')
+if strcmp(option,'paramsfile') | strcmp(option,'paramsfile_noInputdlg')
     userParams={'0';'';'int16';'0';'30000';'2';'8';'both';'True';'10000';...
         '0.005';'True';'1';'5, 5';'0.9';'True'};
-    parameterNames={'data_offset','mapping','data_dtype','dtype_offset','sampling_rate',...
-        'N_t','spike_thresh','peaks','remove_median','max_elts','nclus_min',...
-        'smart_search','cc_merge','dispersion','noise_thr','correct_lag'};
-    dlgTitle='Parameters file options';
-    numLines=1;
-    userParams=inputdlg(parameterNames,dlgTitle,numLines,userParams);
+    if ~strcmp(option,'paramsfile_noInputdlg')
+        parameterNames={'data_offset','mapping','data_dtype','dtype_offset','sampling_rate',...
+            'N_t','spike_thresh','peaks','remove_median','max_elts','nclus_min',...
+            'smart_search','cc_merge','dispersion','noise_thr','correct_lag'};
+        dlgTitle='Parameters file options';
+        numLines=1;
+        userParams=inputdlg(parameterNames,dlgTitle,numLines,userParams);
+    end
     [status,cmdout]=GenerateParamFile(exportFile,exportDir,userParams,userinfo);
 end
 

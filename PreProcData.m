@@ -22,6 +22,33 @@ if strcmp(filterOption{1},'lowpass')
         data(chNm,:)= filtfilt(b, a, data(chNm,:));
     end
     disp(['lowpass done in ' num2str(toc) 'seconds']);
+elseif strcmp(filterOption{1},'LFP')
+    %% butterworth low-pass
+    tic
+    [b,a] = butter(3,300/500,'low'); %500 because downsamples to 1kHz first
+    % delay = round(max(grpdelay(b,a)));
+    ds_data=nan(size(data,1),ceil(size(data,2)/(samplingRate/1000)));
+    for chNm=1:size(data,1)
+        ds_data(chNm,:) = decimate(data(chNm,:),samplingRate/1000); % or use resample function
+        ds_data(chNm,:) = filtfilt(b, a, ds_data(chNm,:));
+    end
+    %denoising
+%     params.Fs=1000;         % sampling frequency
+%     params.fpass=[1 100];   % frequency band to keep
+%     params.tapers=[3 5];   % taper parameters [TW K].
+%     params.pad=2;           % padding factor for fft
+% 
+%     if size(ds_data,2)>size(ds_data,1)
+%         ds_data=ds_data';
+%     end
+%     % remove 60Hz line noise
+%     ds_data=rmlinesc(ds_data,params);
+%     % Remove DC offsets and slowly changing components with locdetrend
+%     % function, using 1s moving window.
+%     movingWin=[1 0.1];
+%     ds_data=locdetrend(ds_data,params.Fs,movingWin);
+    data=ds_data;
+    disp(['downsampling and lowpass done in ' num2str(toc) 'seconds']); % line noise cancellation and detrending done
 elseif strcmp(filterOption{1},'highpass')
     %% butterworth high-pass
     tic

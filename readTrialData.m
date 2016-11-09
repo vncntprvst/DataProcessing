@@ -60,9 +60,9 @@ end
 
 csvFile.eventTime_ms=1000*(double(dataArray{1, 5})*3600+double(dataArray{1, 6})*60+dataArray{1, 7});
 if ~isempty(dateChange)
-    csvFile.eventTime_ms(dateChange:end)=csvFile.eventTime_ms(dateChange:end)+(24*3600);
+    csvFile.eventTime_ms(dateChange:end)=csvFile.eventTime_ms(dateChange:end)+(24*3600*1000);
 end
-
+% figure;plot(csvFile.eventTime_ms);hold on
 % csvFile.eventTime_ms=cellfun(@(x) 1000*(seconds(duration(str2double(x{4}),str2double(x{5}),str2double([x{6} '.' x{7}])))),...
 %     csvFile.trialTime,'UniformOutput',false);
 % cellfun(@(x) (floor(seconds(hours(str2double(x{4})) + ...

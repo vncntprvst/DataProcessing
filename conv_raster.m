@@ -55,7 +55,7 @@ convrasters=(convrasters-meanFR)./stdFR;
 
 %SEM
 convrastsem=std(convrasters)/ sqrt(size(convrasters,1));
-convrastsem = convrastsem * 1.96; % 95% of the data will fall within 1.96 standard deviations of a normal distribution
+% convrastsem = convrastsem * 1.96; % 95% of the data will fall within 1.96 standard deviations of a normal distribution
 
 convsdf=nanmean(convrasters);
 

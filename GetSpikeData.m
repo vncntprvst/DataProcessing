@@ -58,9 +58,12 @@ for ChNum=1:length(KeepChans)
             spikeData.(['Clus' num2str(clusters(clusNum))]).SpikeTimes=Spikes.HandSort.SpikeTimes{KeepChans(ChNum),1}(Spikes.HandSort.Units{KeepChans(ChNum),1}==clusters(clusNum));
             spikeData.(['Clus' num2str(clusters(clusNum))]).Waveforms=Spikes.HandSort.Waveforms{KeepChans(ChNum),1}(:,Spikes.HandSort.Units{KeepChans(ChNum),1}==clusters(clusNum));
         end
-        
-        if sum(~cellfun('isempty',cellfun(@(x) strfind(x,'.phy'),{dataDirListing.name},'UniformOutput',false)))
-            phyData=Load_phyResults([dirName fileName{:} '\' fileName{:} '.GUI']);
+        exportDirListing=dir(cd);
+        if sum(~cellfun('isempty',cellfun(@(x) strfind(x,'.phy'),{exportDirListing.name},'UniformOutput',false)))
+            try
+                phyData=Load_phyResults([dirName fileName{:} '\' fileName{:} '.GUI']);
+            catch
+            end
         end
         
     elseif strfind(fileName,'.mat')

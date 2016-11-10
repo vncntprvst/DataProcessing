@@ -29,8 +29,6 @@ zeroed_TTL_TrialEndIdx(int32(round(zeroed_TTL_TrialEnd)))=true;
 zeroed_Behav_TrialStartIdx=false(1,max([ceil(zeroed_TTL_TrialStart(end)) ceil(zeroed_Behav_TrialStart(end))]));
 zeroed_Behav_TrialStartIdx(int32(round(zeroed_Behav_TrialStart)))=true;
 
-
-
 % figure;hold on
 % plot(zeroed_TTL_TrialStartIdx)
 % plot(zeroed_TTL_TrialEndIdx)
@@ -46,7 +44,7 @@ numBin=ceil(size(zeroed_TTL_TrialStartIdx,2)/binSize);
 % figure;hold on
 % plot(zeroed_TTL_TrialStartIdx_binned)
 % plot(zeroed_Behav_TrialStartIdx_binned*0.5)
-
+% legend('behaviorCommonTrials','ephysCommonTrials')
 % find(zeroed_TTL_TrialStartIdx_binned,10);
 % find(zeroed_Behav_TrialStartIdx_binned,10);
 
@@ -58,6 +56,6 @@ ephysCommonTrials=ismember(find(zeroed_TTL_TrialStartIdx_binned),find(zeroed_Beh
 ismember(find(zeroed_TTL_TrialStartIdx_binned),find(zeroed_Behav_TrialStartIdx_binned)+1) |...
 ismember(find(zeroed_TTL_TrialStartIdx_binned),find(zeroed_Behav_TrialStartIdx_binned)-1);
 
-legend('behaviorCommonTrials','ephysCommonTrials')
+
 
 end

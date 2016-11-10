@@ -1,18 +1,18 @@
-function [Sweep,HeadPos,Behavior]=GetContactTime(videoFile, behaviorFile)
+function [Sweep,HeadPos,Behavior,SweepTrialIdx,exportVDir]=GetContactTime(videoFile, behaviorFile)
 % analyze video recordings and find time of whisker contact
 % may add other behavioral values later on
 
 if ~exist('videoFile','var')
-    % fileName='PrV77_52_HSCam2016-03-17T19_08_11'; 
-[videoFile,vDir] = uigetfile({'*.avi','AVI files';'*.*','All Files' },...
-    'Select HSCam Video file','E:\Data\Video');
-% videoFile=[vDir videoFile];
+    % fileName='PrV77_52_HSCam2016-03-17T19_08_11';
+    [videoFile,vDir] = uigetfile({'*.avi','AVI files';'*.*','All Files' },...
+        'Select HSCam Video file','E:\Data\Video');
+    % videoFile=[vDir videoFile];
 end
 
 if ~exist('behaviorFile','var')
-    % fileName='PrV77_52_HSCam2016-03-17T19_08_11'; 
-[behaviorFile,bDir] = uigetfile({'*.csv','CSV files';'*.*','All Files' },...
-    'Select Behavior files','E:\Data\Behav');
+    % fileName='PrV77_52_HSCam2016-03-17T19_08_11';
+    [behaviorFile,bDir] = uigetfile({'*.csv','CSV files';'*.*','All Files' },...
+        'Select Behavior files','E:\Data\Behav');
 end
 
 %% get trial times
@@ -26,15 +26,15 @@ frameTimetable=readVFrameTime([videoFile(1:end-3) 'csv'],vDir);
 trialTimes=nan(size(Behavior.trials.trialStartTime,1),2);
 for trials=1:size(Behavior.trials.trialStartTime,1)
     try
-    trialTimes(trials,1:2)=[find(Behavior.trials.trialStartTime(trials)<...
-        frameTimetable.frameTimes_ms,1) find(Behavior.trials.trialEndTime(trials)<...
-        frameTimetable.frameTimes_ms,1)];
-    % move start by a fixed time (300ms), toi adjust for IR detection time
-    trialTimes(trials,1)=trialTimes(trials,1)-300;
-    % crop trial duration to 10 seconds max
-    if trialTimes(trials,2)-trialTimes(trials,1)>10000
-        trialTimes(trials,2)=trialTimes(trials,1)+10000;
-    end
+        trialTimes(trials,1:2)=[find(Behavior.trials.trialStartTime(trials)<...
+            frameTimetable.frameTimes_ms,1) find(Behavior.trials.trialEndTime(trials)<...
+            frameTimetable.frameTimes_ms,1)];
+        % move start by a fixed time (300ms), toi adjust for IR detection time
+        trialTimes(trials,1)=trialTimes(trials,1)-300;
+        % crop trial duration to 10 seconds max
+        if trialTimes(trials,2)-trialTimes(trials,1)>10000
+            trialTimes(trials,2)=trialTimes(trials,1)+10000;
+        end
     catch %video file shorter than behavior
         continue
     end
@@ -50,13 +50,13 @@ dlmwrite([videoFile(1:end-4) '_trialTimes.csv'],uint32(trialTimes),...
 % Create a multimedia reader object
 % videoInput = VideoReader([vDir videoFile]);
 % video = read(videoInput,firstFrame:firstFrame+500);
-% 
+%
 % % Initialize parameters
 %  vidStruc = struct('cdata',zeros(videoInput.Height,videoInput.Width,3,'uint8'),'colormap',[]);
-% 
+%
 % % set initial time
 % videoInput.CurrentTime = (10*60)+37; %13:34
-% 
+%
 % % Read one frame at a time using readFrame until the end of 2 sec epoch.
 % % Append data from each video frame to the structure array.
 % clipDuration=2;
@@ -75,7 +75,7 @@ dlmwrite([videoFile(1:end-4) '_trialTimes.csv'],uint32(trialTimes),...
 % if videoInput.Duration<(frameTimetable.frameTimes_ms(end)-frameTimetable.frameTimes_ms(1))/1000
 %     disp('Incorrect video duration!')
 %     % Use VLC to fix this
-% %     Try to automatize: 
+% %     Try to automatize:
 % %     https://forum.videolan.org/viewtopic.php?t=78126
 % %     https://wiki.videolan.org/VLC_command-line_help
 %     % see Processing Data doc file for instructions
@@ -110,8 +110,10 @@ end
 %% Open result .csv file and export contact time points for alignment
 
 exportVDirListing=dir(exportVDir);
-exportVDirListingNames={exportVDirListing.name};
-exportVDirListingNames=exportVDirListingNames(~cellfun('isempty',strfind(exportVDirListingNames,'csv')));
+exportVDirListing=exportVDirListing(~cellfun('isempty',strfind({exportVDirListing.name},'csv')))';
+[SweepTrialIdx,sortIdx]=sort(cellfun(@(x) str2double(regexp(x,'\d+(?=_ROIs)','match')),{exportVDirListing.name}));
+exportVDirListing=exportVDirListing(sortIdx);
+exportVDirListingNames={exportVDirListing.name}';
 
 delimiter = ' ';
 %4 "big" ROIs and 5 * small stacks of 3 ROI windows
@@ -121,8 +123,8 @@ delimiter = ' ';
 %             '%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' ...
 %             '%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' ...
 %             '%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' ...
-%             '%s%s%s%s%s%s%s%[^\n\r]']; 
-%14 stacks of 42 ROI windows (588 ROIs) + 5 Head position float values
+%             '%s%s%s%s%s%s%s%[^\n\r]'];
+%14 stacks of 42 ROI windows (588 ROIs) + texture panel (1 ROI) + 5 Head position float values
 formatSpec = ['%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' ...
     '%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' ...
     '%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' ...
@@ -136,12 +138,12 @@ formatSpec = ['%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%
     '%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' ...
     '%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' ...
     '%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' ...
-    '%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' ...
+    '%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' ...
     '%f%f%f%f%f%[^\n\r]'];
 startRow = 1;
 
 Sweep=struct('Frame',[],'LongiPosition',[],'Duration',[],'MaxDepth',[],'Velocity',[]);
-for csvFile=1:10 %size(exportVDirListingNames,2) 
+for csvFile=1:size(exportVDirListingNames,1)
     %open file
     fileID = fopen(exportVDirListingNames{csvFile},'r');
     
@@ -149,35 +151,38 @@ for csvFile=1:10 %size(exportVDirListingNames,2)
     arrayVals = textscan(fileID, formatSpec, 'Delimiter', delimiter,...
         'MultipleDelimsAsOne', true, 'EmptyValue' ,NaN, 'ReturnOnError', false);
     boolArray = strcmp([arrayVals{1:588}],'True');
-    HeadPos{csvFile} = [arrayVals{589:end-1}]; %Centroid X, Y, Orientation, Major Axis Length, Minor Axis Length
+    boolPanel = strcmp([arrayVals{589}],'True');
+    HeadPos{csvFile} = [arrayVals{590:end-1}]; %Centroid X, Y, Orientation, Major Axis Length, Minor Axis Length
     %just for debugging purposes: frewind(fileID);
     
     % Close file.
     fclose(fileID);
-
+    
+    disp('loaded csv data')
+    
     %% analyze it
-        %rules:
-%     * if upper activation, needs to have gone through lower or side first 
-%     -> whisker touch is when it went from lower to upper in order (may skip one?)
-%     * all full-column activation is disregarded, unless it's a fast, periodical
-%       input (define fast and periodic frequency)
-
-% make heatmap first
+    %rules:
+    %     * if upper activation, needs to have gone through lower or side first
+    %     -> whisker touch is when it went from lower to upper in order (may skip one?)
+    %     * all full-column activation is disregarded, unless it's a fast, periodical
+    %       input (define fast and periodic frequency)
+    
+    % make heatmap first
     %%
-%     figure; colormap(copper); %imagesc(boolArray);
-%     subplot(1,6,1)
-%     imagesc(fliplr(boolArray(1:300,1:4)));
-%     subplot(1,6,2)
-%     imagesc(boolArray(1:300,17:19));
-%     subplot(1,6,3)
-%     imagesc(boolArray(1:300,14:16));
-%     subplot(1,6,4)
-%     imagesc(boolArray(1:300,11:13));
-%     subplot(1,6,5)
-%     imagesc(boolArray(1:300,8:10));
-%     subplot(1,6,6)
-%     imagesc(boolArray(1:300,5:7));
-    %% 588 ROIs version
+    %     figure; colormap(copper); %imagesc(boolArray);
+    %     subplot(1,6,1)
+    %     imagesc(fliplr(boolArray(1:300,1:4)));
+    %     subplot(1,6,2)
+    %     imagesc(boolArray(1:300,17:19));
+    %     subplot(1,6,3)
+    %     imagesc(boolArray(1:300,14:16));
+    %     subplot(1,6,4)
+    %     imagesc(boolArray(1:300,11:13));
+    %     subplot(1,6,5)
+    %     imagesc(boolArray(1:300,8:10));
+    %     subplot(1,6,6)
+    %     imagesc(boolArray(1:300,5:7));
+    %% 588 +1 ROIs version
     ROIactivation=zeros(size(boolArray,1),14);
     for frameIdx=1:size(boolArray,1);
         frameActivationData(:,:,frameIdx)=reshape(boolArray(frameIdx,:),[42 14]);
@@ -185,87 +190,110 @@ for csvFile=1:10 %size(exportVDirListingNames,2)
     end
     lastActivFrame=find(diff(sum(ROIactivation')),1,'last');
     firstActivFrame=find(diff(sum(ROIactivation')),1,'first');
-
-% 3D figure
-%     figure; cmap=colormap('copper'); %colormap(flipud(cmap));
-%     surf(ROIactivation(max([1 firstActivFrame-100]):min([lastActivFrame+100 size(boolArray,1)]),:))
-%     
-%     xlabel(gca,'Position, Left to Right ')
-%     ylabel(gca,'Time (ms)')
-%     zlabel(gca,'Degree of activation')
-
-%% Columns figure
-%     figure; colormap(copper);
-%     for ROIcol=1:14
-%         subplot(1,14,ROIcol);
-%         imagesc(fliplr(flipud(squeeze(frameActivationData(:,...
-%             ROIcol,max([1 firstActivFrame-100]):min([lastActivFrame+100 size(boolArray,1)])))')));
-%         set(gca,'xticklabel','')
-%         if ROIcol>1
-%             set(gca,'YTickLabel','')
-%         else
-%             set(gca,'YTickLabel',flipud(get(gca,'YTickLabel')))
-%             ylabel(gca,'Time (ms)')
-%         end
-%     end
-%     titleh=title([exportVDirListingNames{csvFile}(1:9) '_' num2str(csvFile)]);
-%     set(titleh,'interpreter','none');
     
-% boolArray(:,15) && ([true; boolArray(1:end-1,14)] || [true; boolArray(1:end-1,11)]) &&...
-%  ([true; true; boolArray(1:end-2,14)] || [true; true; boolArray(1:end-2,10)]);
-
-activ3D=flip(frameActivationData(:,:,firstActivFrame:lastActivFrame)); %flipping depth back to bottom up
-%find connected regions
-connComp = bwconncomp(activ3D);
-% keep only blobs with more than 10 pixels
-connComp.PixelIdxList=connComp.PixelIdxList(cellfun(@(comp) numel(comp)>10, connComp.PixelIdxList));
-connComp.NumObjects=size(connComp.PixelIdxList,2);
-% get indices
-[Depth,Position,Frame] = cellfun(@(comp) ind2sub(connComp.ImageSize,comp),connComp.PixelIdxList,'UniformOutput',false);
-% for a given object, keep "highest" depth for a given frame
-
-% Image is 640 x 420
-% ROIs are 10px deep, frame freq is 1kHz, so velocity is in px/ms;
-% For cylinder panel, x position is 0 > 100 > 320 > 540 > 640
-%                     y position is 420 > 345 > 320  > 345 > 420
-% For angled panel, x 36 > 336 > 636
-%                   y 420 > 330 > 260
-
-ROIdepth=10;
-for compNum=1:connComp.NumObjects
-    keepFrame=nan(size(Depth{compNum},1),1);
-    for frameNum=1:size(Depth{compNum},1)
-        framesDepth=Depth{compNum}(Frame{compNum}==Frame{compNum}(frameNum));
-        keepFrame(frameNum)=find(Frame{compNum}==Frame{compNum}(frameNum),1,'first')+...
-            find(framesDepth==max(framesDepth),1,'first')-1;
-    end
-    Depth{compNum}=Depth{compNum}(unique(keepFrame));
-    Position{compNum}=Position{compNum}(unique(keepFrame));
-    Frame{compNum}=Frame{compNum}(unique(keepFrame));
-    %   figure; hold on; plot(Depth{compNum});
-    % get monotonic epochs (= bottom up sweeps), depth, duration
-    sweepEpochs=bwlabel([true;diff(Depth{compNum})>=0]);
-    for sweepNum=1:max(unique(sweepEpochs(sweepEpochs>0)))
-        if sum(sweepEpochs==sweepNum)==1
-            continue;
+    %keep panel touch index within those activation boundariess
+    panelTouchIdx=find(boolPanel(firstActivFrame:lastActivFrame));
+    %% 3D figure
+    %     figure; cmap=colormap('copper'); %colormap(flipud(cmap));
+    %     surf(ROIactivation(max([1 firstActivFrame-100]):min([lastActivFrame+100 size(boolArray,1)]),:))
+    %
+    %     xlabel(gca,'Position, Left to Right ')
+    %     ylabel(gca,'Time (ms)')
+    %     zlabel(gca,'Degree of activation')
+    
+    %% Columns figure
+    %     figure; colormap(copper);
+    %     for ROIcol=1:14
+    %         subplot(1,14,ROIcol);
+    %         imagesc(fliplr(flipud(squeeze(frameActivationData(:,...
+    %             ROIcol,max([1 firstActivFrame-100]):min([lastActivFrame+100 size(boolArray,1)])))')));
+    %         set(gca,'xticklabel','')
+    %         if ROIcol>1
+    %             set(gca,'YTickLabel','')
+    %         else
+    %             set(gca,'YTickLabel',flipud(get(gca,'YTickLabel')))
+    %             ylabel(gca,'Time (ms)')
+    %         end
+    %     end
+    %     titleh=title([exportVDirListingNames{csvFile}(1:9) '_' num2str(csvFile)]);
+    %     set(titleh,'interpreter','none');
+    
+    % boolArray(:,15) && ([true; boolArray(1:end-1,14)] || [true; boolArray(1:end-1,11)]) &&...
+    %  ([true; true; boolArray(1:end-2,14)] || [true; true; boolArray(1:end-2,10)]);
+    
+    %% find blobs
+    %flipping depth back to bottom up
+    activ3D=flip(frameActivationData(:,:,firstActivFrame:lastActivFrame));
+    %find connected regions
+    connComp = bwconncomp(activ3D);
+    % keep only blobs with more than 10 pixels
+    connComp.PixelIdxList=connComp.PixelIdxList(cellfun(@(comp) numel(comp)>10, connComp.PixelIdxList));
+    connComp.NumObjects=size(connComp.PixelIdxList,2);
+    % get indices
+    [Depth,Position,Frame] = cellfun(@(comp) ind2sub(connComp.ImageSize,comp),connComp.PixelIdxList,'UniformOutput',false);
+    
+    % Image is 640 x 480px. 1px = 0.094mm, ROIs are 10px deep = 0.94mm
+    %  frame freq is 1kHz. Convert velocity from px/ms to mm/s;
+    % For cylinder panel, x position is 0 > 100 > 320 > 540 > 640
+    %                     y position is 480 > 405 > 380  > 405 > 480
+    % For angled panel, x 36 > 336 > 636
+    %                   y 480 > 390 > 320
+    
+    % for a given object, keep "highest" depth for a given frame
+    ROIdepth=0.94;
+    if connComp.NumObjects~=0
+        for compNum=1:connComp.NumObjects
+            keepFrame=nan(size(Depth{compNum},1),1);
+            for frameNum=1:size(Depth{compNum},1)
+                framesDepth=Depth{compNum}(Frame{compNum}==Frame{compNum}(frameNum));
+                keepFrame(frameNum)=find(Frame{compNum}==Frame{compNum}(frameNum),1,'first')+...
+                    find(framesDepth==max(framesDepth),1,'first')-1;
+            end
+            Depth{compNum}=Depth{compNum}(unique(keepFrame));
+            Position{compNum}=Position{compNum}(unique(keepFrame));
+            Frame{compNum}=Frame{compNum}(unique(keepFrame));
+%               figure; hold on; plot3(Frame{compNum},Position{compNum},Depth{compNum});
+%               xlabel('Frame'); ylabel('Position'); zlabel('Depth');
+            % get monotonic epochs (= bottom up sweeps), depth, duration
+            sweepEpochs=bwlabel([true;diff(Depth{compNum})>=0]);
+            for sweepNum=1:max(unique(sweepEpochs(sweepEpochs>0)))
+                sweepIdx=sweepEpochs==sweepNum;
+                if sum(sweepIdx)==1
+                    continue;
+                end
+                Sweep(csvFile).Frame(compNum,sweepNum)=Frame{compNum}(find(sweepIdx,1,'first'));
+                Sweep(csvFile).LongiPosition(compNum,sweepNum)=Position{compNum}(find(sweepIdx,1,'first'));
+                Sweep(csvFile).Duration(compNum,sweepNum)=sum(sweepIdx);
+                Sweep(csvFile).MaxDepth(compNum,sweepNum)=max(Depth{compNum}(sweepIdx))*ROIdepth;
+                Sweep(csvFile).Velocity(compNum,sweepNum)=(max(Depth{compNum}(sweepIdx))-...
+                    min(Depth{compNum}(sweepIdx))+1)*ROIdepth/...
+                    sum(sweepIdx)*1000;
+                %Find if sweep contacts panel.
+                allSweep=find(sweepIdx);
+                sweepContact=allSweep(ismember(Frame{compNum}(sweepIdx),panelTouchIdx));
+                if ~isempty(sweepContact)
+                    Sweep(csvFile).Contact(compNum,sweepNum)=...
+                        Frame{compNum}(sweepContact(1))+firstActivFrame;%re-indexing contact to initial frame
+                                                        %Sweep(csvFile).MaxDepth(compNum,sweepNum)>320;
+                else
+%                     Sweep(csvFile).Contact(compNum,sweepNum)=[];
+                end
+            end
         end
-        Sweep(csvFile).Frame(compNum,sweepNum)=Frame{compNum}(find(sweepEpochs==sweepNum,1,'first'));
-        Sweep(csvFile).LongiPosition(compNum,sweepNum)=Position{compNum}(find(sweepEpochs==sweepNum,1,'first'));
-        Sweep(csvFile).Duration(compNum,sweepNum)=sum(sweepEpochs==sweepNum);
-        Sweep(csvFile).MaxDepth(compNum,sweepNum)=max(Depth{compNum}(sweepEpochs==sweepNum))*ROIdepth;
-        Sweep(csvFile).Velocity(compNum,sweepNum)=(max(Depth{compNum}(sweepEpochs==sweepNum))-...
-                                    min(Depth{compNum}(sweepEpochs==sweepNum))+1)*ROIdepth/...
-                                    sum(sweepEpochs==sweepNum);
-        %Find if sweep contacts panel.
-        Sweep(csvFile).Contact(compNum,sweepNum)=Sweep(csvFile).MaxDepth(compNum,sweepNum)>320;
+    else
+        Sweep(csvFile).Frame=[];
+        Sweep(csvFile).LongiPosition=[];
+        Sweep(csvFile).Duration=[];
+        Sweep(csvFile).MaxDepth=[];
+        Sweep(csvFile).Velocity=[];
+        Sweep(csvFile).Contact=[];
     end
-end
-Sweep(csvFile).Frame(Sweep(csvFile).Frame==0)=NaN;
-Sweep(csvFile).LongiPosition(Sweep(csvFile).LongiPosition==0)=NaN;
-Sweep(csvFile).Duration(Sweep(csvFile).Duration==0)=NaN;
-Sweep(csvFile).MaxDepth(Sweep(csvFile).MaxDepth==0)=NaN;
-Sweep(csvFile).Velocity(Sweep(csvFile).Velocity==0)=NaN; 
-
+    Sweep(csvFile).Frame(Sweep(csvFile).Frame==0)=NaN;
+    Sweep(csvFile).LongiPosition(Sweep(csvFile).LongiPosition==0)=NaN;
+    Sweep(csvFile).Duration(Sweep(csvFile).Duration==0)=NaN;
+    Sweep(csvFile).MaxDepth(Sweep(csvFile).MaxDepth==0)=NaN;
+    Sweep(csvFile).Velocity(Sweep(csvFile).Velocity==0)=NaN;
+    Sweep(csvFile).Contact(Sweep(csvFile).Contact==0)=NaN;
 end
 % figure;
 % durHist=histogram(Sweep.Duration')
@@ -275,11 +303,11 @@ end
 % %     set(gca,'xlim',[0 200],'XTick',linspace(0,200,5),'XTickLabel',linspace(0,200,5),...
 % %         'TickDir','out','Color','white','FontSize',10,'FontName','Calibri');
 % %     hold off
-% 
+%
 % figure;
 % velHist=histogram(Sweep.Velocity')
 %     velHist.EdgeColor = 'k';
 %     xlabel('Whisker sweep duration (px/ms)')
 %     axis('tight');box off;
-% 
+%
 

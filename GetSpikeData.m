@@ -1,5 +1,5 @@
 %% Get spike clusters, times, waveforms
-function [spikeData,Trials]=GetSpikeData(KeepChans)
+function [spikeData,Trials,fileInfo]=GetSpikeData(KeepChans)
 
 %% Get file path
 [fName,dirName] = uigetfile({'*.mat; *.hdf5; *.npy','Processed data';'*.dat','Flat data';...
@@ -27,12 +27,14 @@ if strfind(fName,'.mat')
     load([fileName{:} '_info.mat']);
     
 elseif strfind(fName,'.hdf5')
-    fileName=regexp(fName,'\w+(?=\.\w+\.)','match','once')
+    fileName=regexp(fName,'\w+(?=\.\w+\.)','match','once');
 elseif strfind(fName,'.npy') %output from phy GUI
     spikeData=Load_phyResults(dirName);
     cd('..\..'); %check two folders up, original export/process data folder
     exportDirListing=dir(cd); %regexp(cd,'\w+$','match')
     Trials=importdata(exportDirListing(~cellfun('isempty',cellfun(@(x) strfind(x,'_trials.'),...
+        {exportDirListing.name},'UniformOutput',false))).name);
+    fileInfo=importdata(exportDirListing(~cellfun('isempty',cellfun(@(x) strfind(x,'_info.'),...
         {exportDirListing.name},'UniformOutput',false))).name);
     return
 end

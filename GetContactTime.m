@@ -151,7 +151,7 @@ for csvFile=1:size(exportVDirListingNames,1)
     arrayVals = textscan(fileID, formatSpec, 'Delimiter', delimiter,...
         'MultipleDelimsAsOne', true, 'EmptyValue' ,NaN, 'ReturnOnError', false);
     boolArray = strcmp([arrayVals{1:588}],'True');
-    boolPanel = strcmp([arrayVals{589}],'True');
+    Sweep(csvFile).panelTouchIdx = strcmp([arrayVals{589}],'True');
     HeadPos{csvFile} = [arrayVals{590:end-1}]; %Centroid X, Y, Orientation, Major Axis Length, Minor Axis Length
     %just for debugging purposes: frewind(fileID);
     
@@ -192,7 +192,7 @@ for csvFile=1:size(exportVDirListingNames,1)
     firstActivFrame=find(diff(sum(ROIactivation')),1,'first');
     
     %keep panel touch index within those activation boundariess
-    panelTouchIdx=find(boolPanel(firstActivFrame:lastActivFrame));
+    panelTouchIdx=find(Sweep(csvFile).panelTouchIdx(firstActivFrame:lastActivFrame));
     %% 3D figure
     %     figure; cmap=colormap('copper'); %colormap(flipud(cmap));
     %     surf(ROIactivation(max([1 firstActivFrame-100]):min([lastActivFrame+100 size(boolArray,1)]),:))
@@ -273,7 +273,7 @@ for csvFile=1:size(exportVDirListingNames,1)
                 sweepContact=allSweep(ismember(Frame{compNum}(sweepIdx),panelTouchIdx));
                 if ~isempty(sweepContact)
                     Sweep(csvFile).Contact(compNum,sweepNum)=...
-                        Frame{compNum}(sweepContact(1))+firstActivFrame;%re-indexing contact to initial frame
+                        {Frame{compNum}(sweepContact)+firstActivFrame};%re-indexing contact to initial frame
                                                         %Sweep(csvFile).MaxDepth(compNum,sweepNum)>320;
                 else
 %                     Sweep(csvFile).Contact(compNum,sweepNum)=[];
@@ -293,7 +293,6 @@ for csvFile=1:size(exportVDirListingNames,1)
     Sweep(csvFile).Duration(Sweep(csvFile).Duration==0)=NaN;
     Sweep(csvFile).MaxDepth(Sweep(csvFile).MaxDepth==0)=NaN;
     Sweep(csvFile).Velocity(Sweep(csvFile).Velocity==0)=NaN;
-    Sweep(csvFile).Contact(Sweep(csvFile).Contact==0)=NaN;
 end
 % figure;
 % durHist=histogram(Sweep.Duration')

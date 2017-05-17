@@ -2,7 +2,7 @@ function [paramFStatus,cmdout]=GenerateParamFile(exportFile,exportDir,userParams
 
 % Creates parameter file for Spyking Circus 
 % (see http://spyking-circus.readthedocs.io/ for info)
-% Environement variables (defined in "userinfo" structure), as well as 
+% Environment variables (defined in "userinfo" structure), as well as 
 % processing parameters ("userParams") need to be adjusted by user.
 % Data file (exportFile) naming convention is as follow: 
 % {Subject}_{Session}_{[opt]Condition}_{RecordingSystem}_{ChannelNumber}_{PreProcessing}
@@ -55,7 +55,13 @@ if strcmp(userParams{2},'')
         probeID=implantList(~cellfun('isempty',...
             strfind(strrep({implantList.Mouse},'-',''),'default'))).Probe;
     end
-    probeFile=['C:\\Users\\' userinfo.user '\\spyking-circus\\probes\\' probeID '.prb'];
+%     probeFile=['C:\\Users\\' userinfo.user '\\spyking-circus\\probes\\' probeID '.prb'];
+    [~,scDirectory]=system('conda info -e');
+    scDirectory=cell2mat(regexp(scDirectory,'(?<=spykc                    ).+?(?=\n)','match'));
+    if isempty(scDirectory)
+        scDirectory=cell2mat(regexp(scDirectory,'(?<=root                  \*  ).+?(?=\n)','match'));
+    end
+    probeFile=[regexprep(scDirectory,'\\','\\\') '\\data\\spyking-circus\\probes\\' probeID '.prb'];
     userParams{2}=probeFile;
 end
 

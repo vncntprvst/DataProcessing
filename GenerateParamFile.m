@@ -27,12 +27,12 @@ switch nargin
         exportFile=exportFile(~cellfun('isempty',cellfun(@(x) strfind(x,'.dat'),...
             {exportFile.name},'UniformOutput', false))).name;
         userinfo=UserDirInfo;
-        userParams={'0';'';'int16';'0';'30000';'2';'8';'both';'True';'10000';...
-        '0.005';'True';'1';'5, 5';'0.9';'True'};
+        userParams={'raw_binary';'30000';'int16';'32';'';'3';'8';'both';'True';'10000';...
+        '0.002';'True';'0.975';'5, 5';'0.8';'True';'True'};
     case 2
         userinfo=UserDirInfo;
-        userParams={'0';'';'int16';'0';'30000';'2';'8';'both';'True';'10000';...
-        '0.005';'True';'1';'5, 5';'0.9';'True'};
+        userParams={'raw_binary';'30000';'int16';'32';'';'3';'8';'both';'True';'10000';...
+        '0.002';'True';'0.975';'5, 5';'0.8';'True';'True'};
     case 3
         userinfo=UserDirInfo;
     case 4
@@ -42,7 +42,7 @@ switch nargin
 end
 
 % load implant list and find probe file name
-if strcmp(userParams{2},'')
+if strcmp(userParams{5},'')
     subjectName=regexp(strrep(exportFile,'_','-'),'^\w+\d+(?=-)','match');
     if isempty(subjectName) % different naming convention
         subjectName=regexp(strrep(exportFile,'_','-'),'^\w+(?=-)','match');
@@ -57,12 +57,12 @@ if strcmp(userParams{2},'')
     end
 %     probeFile=['C:\\Users\\' userinfo.user '\\spyking-circus\\probes\\' probeID '.prb'];
     [~,scDirectory]=system('conda info -e');
-    scDirectory=cell2mat(regexp(scDirectory,'(?<=spykc                    ).+?(?=\n)','match'));
+    scDirectory=cell2mat(regexp(scDirectory,['(?<=' userinfo.circusEnv '                   ).+?(?=\n)'],'match'));
     if isempty(scDirectory)
         scDirectory=cell2mat(regexp(scDirectory,'(?<=root                  \*  ).+?(?=\n)','match'));
     end
     probeFile=[regexprep(scDirectory,'\\','\\\') '\\data\\spyking-circus\\probes\\' probeID '.prb'];
-    userParams{2}=probeFile;
+    userParams{5}=probeFile;
 end
 
 if ~isdir(exportDir)
@@ -78,10 +78,10 @@ end
 
 % generate template params file
 [status,cmdout] = system(['cd ' userinfo.envScriptDir ' &'...
-    'activate spykc &'...
+    'activate ' userinfo.circusEnv ' &'...
     'spyking-circus ' ...
     exportDir filesep exportFile '.dat <' userinfo.ypipe ' &'...
-    'exit &']); %  final ' &' makes command run in background outside Matlab
+     'exit &']); %  final ' &' makes command run in background outside Matlab
 
 if status~=0
     return
@@ -104,22 +104,27 @@ fclose(fid);
 delete([exportFile '.params'])
 
 % replace parameters with user values
-dftParams = regexprep(dftParams,'(?<=data_offset    = )\w+(?= )',userParams{1});
-dftParams = regexprep(dftParams,'(?<=mapping        = )\w+.\w+.\w+(?= )', probeFile);
-dftParams = regexprep(dftParams,'(?<=data_dtype     = )\w+(?= )',userParams{3});
-dftParams = regexprep(dftParams,'(?<=dtype_offset   = )\w+(?= )',userParams{4});
-dftParams = regexprep(dftParams,'(?<=sampling_rate  = )\w+(?= )',userParams{5});
-dftParams = regexprep(dftParams,'(?<=N_t            = )\w+(?= )',userParams{6});
-dftParams = regexprep(dftParams,'(?<=spike_thresh   = )\w+(?= )',userParams{7});
-dftParams = regexprep(dftParams,'(?<=peaks          = )\w+(?= )',userParams{8});
-dftParams = regexprep(dftParams,'(?<=remove_median  = )\w+(?= )',userParams{9});
-dftParams = regexprep(dftParams,'(?<=max_elts       = )\w+(?= )',userParams{10}); %20000 10000
-dftParams = regexprep(dftParams,'(?<=nclus_min      = )\w.\w+(?= )',userParams{11}); %0.0001 0.01
-dftParams = regexprep(dftParams,'(?<=smart_search   = )\w+(?= )',userParams{12}); %0.01 0
-dftParams = regexprep(dftParams,'(?<=cc_merge       = )\w.\w+(?= )',userParams{13}); 
-dftParams = regexprep(dftParams,'(?<=dispersion     = \()\w+, \w+(?=\) )',userParams{14});
-dftParams = regexprep(dftParams,'(?<=noise_thr      = )\w.\w+(?= )',userParams{15});
-dftParams = regexprep(dftParams,'(?<=correct_lag    = )\w+(?= )',userParams{16});
+% dftParams = regexprep(dftParams,'(?<=data_offset\s+=\s)\w+(?=\s)',userParams{1});
+dftParams = regexprep(dftParams,'(?<=file_format\s+=\s)\s+(?=#)',[userParams{1} '\r\n'...
+'sampling_rate\s+=\s' userParams{2} '\r\n'...
+'data_dtype\s+=\s' userParams{3} '\r\n'...
+'nb_channels\s+=\s' userParams{4} ' ']);
+dftParams = regexprep(dftParams,'(?<=mapping\s+=\s)~/probes/mea_252.prb(?=\s)', userParams{5});
+% dftParams = regexprep(dftParams,'(?<=data_dtype \s+=\s)\w+(?=\s)',userParams{3});
+% dftParams = regexprep(dftParams,'(?<=dtype_offset  \s+=\s)\w+(?=\s)',userParams{4});
+% dftParams = regexprep(dftParams,'(?<=sampling_rate \s+=\s)\w+(?=\s)',userParams{5});
+dftParams = regexprep(dftParams,'(?<=N_t\s+=\s)\w+(?=\s)',userParams{6}); %Default: 5; Try: 2
+dftParams = regexprep(dftParams,'(?<=spike_thresh\s+=\s)\w+(?=\s)',userParams{7}); %Default: 6; Try: 8
+dftParams = regexprep(dftParams,'(?<=peaks\s+=\s)\w+(?=\s)',userParams{8}); %Default: negative; Try: both
+dftParams = regexprep(dftParams,'(?<=remove_median\s+=\s)\w+(?=\s)',userParams{9}); %Default: False; Try: True
+dftParams = regexprep(dftParams,'(?<=max_elts\s+=\s)\w+(?=\s)',userParams{10}); %Default: 10000; Try: 10000 (20000)
+dftParams = regexprep(dftParams,'(?<=nclus_min\s+=\s)\w.\w+(?=\s)',userParams{11}); %Default: 0.002; Try 0.005 (0.0001 0.01)
+dftParams = regexprep(dftParams,'(?<=smart_search\s+=\s)\w+(?=\s)',userParams{12}); %Default: True; Try: True
+dftParams = regexprep(dftParams,'(?<=cc_merge\s+=\s)\w.\w+(?=\s)',userParams{13}); %Default: 0.975; Try: 1
+dftParams = regexprep(dftParams,'(?<=dispersion\s+=\s\()\w+, \w+(?=\) )',userParams{14}); %Default: (5, 5); Try: 5, 5
+dftParams = regexprep(dftParams,'(?<=noise_thr\s+=\s)\w.\w+(?=\s)',userParams{15}); %Default: 0.8; Try: 0.9
+dftParams = regexprep(dftParams,'(?<=collect_all\s+=\s)\w+(?=\s)',userParams{16}); %Default: False; Try: True
+dftParams = regexprep(dftParams,'(?<=correct_lag\s+=\s)\w+(?=\s)',userParams{17}); %Default: True; Try: True
 
 % write new params file
 fid  = fopen([exportFile '.params'],'w');

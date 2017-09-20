@@ -38,7 +38,7 @@ elseif contains(fName,'.nev')
     % chSelected=channels(chSelected);
     
 elseif contains(fName,'.hdf5')
-    fName=regexp(fName,'\w+(?=\.\w+\.)','match','once');
+%     fName=regexp(fName,'\w+(?=\.\w+\.)','match','once');
 elseif contains(fName,'.npy') %output from phy GUI
     spikeData=Load_phyResults(dirName);
     cd('..\..'); %check two folders up, original export/process data folder
@@ -94,9 +94,9 @@ for ChNum=1:length(KeepChans)
     elseif contains(fName,'.hdf5')
 %         clusters ? 
         fName=regexp(fName,'\w+(?=\.\w+\.)','match','once');
-        Spikes.Offline_Sorting.Units{KeepChans(ChNum),1}=h5read([fName '.clusters.hdf5'],'/clusters_2');
-        Spikes.Offline_Sorting.spikeTimes{3,1}=h5read([fName '.clusters.hdf5'],'/times_2');
-        Spikes.Offline_Sorting.waveForms{3,1}=h5read([fName '.clusters.hdf5'],'/data_2');
+        Spikes.Offline_Sorting.Units{KeepChans(ChNum),1}=h5read([fName '.clusters.hdf5'],['/clusters_' num2str(KeepChans-1)]);
+        Spikes.Offline_Sorting.spikeTimes{3,1}=h5read([fName '.clusters.hdf5'],['/times_' num2str(KeepChans-1)]);
+        Spikes.Offline_Sorting.waveForms{3,1}=h5read([fName '.clusters.hdf5'],['/data_' num2str(KeepChans-1)]);
         Spikes.Offline_Sorting.waveForms=h5read([fName '.templates.hdf5'],'/temp_data');
         Spikes.Offline_Sorting.templates{10,1}.spikeTimes=h5read([fName '.result.hdf5'],'/spiketimes/temp_10');
         Spikes.Offline_Sorting.templates{10,1}.amplitudes=h5read([fName '.result.hdf5'],'/amplitudes/temp_10');

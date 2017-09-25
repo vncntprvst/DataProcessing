@@ -43,7 +43,7 @@ end
 
 % load implant list and find probe file name
 if strcmp(userParams{5},'')
-    subjectName=regexp(strrep(exportFile,'_','-'),'^\w+\d+(?=-)','match');
+    subjectName=regexp(exportFile,'^\S+?(?=\W)','match');
     if isempty(subjectName) % different naming convention
         subjectName=regexp(strrep(exportFile,'_','-'),'^\w+(?=-)','match');
     end
@@ -66,11 +66,11 @@ if strcmp(userParams{5},'')
 end
 
 if ~isdir(exportDir)
-    %move to export directory
+    %create export directory
     mkdir(exportDir);
-    cd(exportDir);
 end
-
+cd(exportDir);
+    
 if exist([exportFile '.params'],'file')==2
     %remove pre-existing parameter file
     delete([exportFile '.params'])
@@ -106,9 +106,9 @@ delete([exportFile '.params'])
 % replace parameters with user values
 % dftParams = regexprep(dftParams,'(?<=data_offset\s+=\s)\w+(?=\s)',userParams{1});
 dftParams = regexprep(dftParams,'(?<=file_format\s+=\s)\s+(?=#)',[userParams{1} '\r\n'...
-'sampling_rate\s+=\s' userParams{2} '\r\n'...
-'data_dtype\s+=\s' userParams{3} '\r\n'...
-'nb_channels\s+=\s' userParams{4} ' ']);
+'sampling_rate  = ' userParams{2} '\r\n'...
+'data_dtype     = ' userParams{3} '\r\n'...
+'nb_channels    = ' userParams{4} ' ']);
 dftParams = regexprep(dftParams,'(?<=mapping\s+=\s)~/probes/mea_252.prb(?=\s)', userParams{5});
 % dftParams = regexprep(dftParams,'(?<=data_dtype \s+=\s)\w+(?=\s)',userParams{3});
 % dftParams = regexprep(dftParams,'(?<=dtype_offset  \s+=\s)\w+(?=\s)',userParams{4});

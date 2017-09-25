@@ -26,7 +26,7 @@ end
 
 %% declarations
 try 
-    userinfo=UserDirInfo;
+    userinfo=UserDirInfo('simple pyEnv');
 catch 
     userinfo=[];
 end
@@ -83,11 +83,16 @@ end
 
 if strfind(option{1},'launcherGUI')
     % check MPI status and start if needed
-    checkMPIstatus(userinfo);
+%     checkMPIstatus(userinfo);
     status=0;
+if exist('userinfo','var') && isfield(userinfo,'circusEnv')
+    activation=['activate ' userinfo.circusEnv ' & '];
+else
+    activation='';
+end
     %% run preview
     system(['cd /d ' userinfo.envScriptDir ' &'...
-        'activate ' userinfo.circusEnv ' &'...
+        activation ...
         'SETLOCAL &'...
         'set PATH="' envDirs ';' userinfo.MPIDir ';' userinfo.WinDirs '" &'...
         'spyking-circus-launcher &'...

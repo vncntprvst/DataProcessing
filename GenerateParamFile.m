@@ -61,7 +61,16 @@ if strcmp(userParams{5},'')
     if isempty(scDirectory)
         scDirectory=cell2mat(regexp(scDirectory,'(?<=root                  \*  ).+?(?=\n)','match'));
     end
-    probeFile=[regexprep(scDirectory,'\\','\\\') '\\data\\spyking-circus\\probes\\' probeID '.prb'];
+    % find probes directory
+    dSep=[filesep filesep];
+    if exist([scDirectory filesep 'data' filesep 'spyking-circus' filesep 'probes'],'dir') 
+        probeFile=[regexprep(scDirectory,['\' filesep],['\' dSep]) dSep 'data' dSep 'spyking-circus' dSep 'probes' dSep probeID '.prb'];
+    elseif exist([userinfo.circusHomeDir filesep 'probes'],'dir')
+        probeFile=[regexprep(userinfo.circusHomeDir,['\' filesep],['\' dSep]) dSep 'probes' dSep probeID '.prb'];
+    else
+        probesDir= uigetdir(cd,'Select folder where probe mapings are located');
+        probeFile=[probesDir dSep probeID '.prb'];
+    end
     userParams{5}=probeFile;
 end
 

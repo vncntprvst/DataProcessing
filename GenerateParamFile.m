@@ -48,12 +48,10 @@ if strcmp(userParams{5},'')
         subjectName=regexp(strrep(exportFile,'_','-'),'^\w+(?=-)','match');
     end
     load([userinfo.probemap filesep 'ImplantList.mat']);
-    try
-        probeID=implantList(~cellfun('isempty',...
-            strfind(strrep({implantList.Mouse},'-',''),subjectName{:}))).Probe;
-    catch
-        probeID=implantList(~cellfun('isempty',...
-            strfind(strrep({implantList.Mouse},'-',''),'default'))).Probe;
+    try 
+        probeID=implantList(contains(strrep({implantList.Mouse},'-',''),subjectName,'IgnoreCase',true)).Probe;
+    catch %'default'
+        probeID=implantList(contains(strrep({implantList.Mouse},'-',''),'default','IgnoreCase',true)).Probe;
     end
 %     probeFile=['C:\\Users\\' userinfo.user '\\spyking-circus\\probes\\' probeID '.prb'];
     [~,scDirectory]=system('conda info -e');

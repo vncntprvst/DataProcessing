@@ -64,7 +64,7 @@ if strcmp(option{1},'paramsfile') | strcmp(option{1},'paramsfile_noInputdlg')
         userParams=inputdlg(parameterNames,dlgTitle,numLines,userParams);
     end
     userParams{5}='';
-    [status,cmdout]=GenerateParamFile(exportFile,exportDir,userParams,userinfo);
+    [status,cmdout]=GenerateSCParamFile(exportFile,exportDir,userParams,userinfo);
 end
 
 if strfind(option{1},'previewspkc')

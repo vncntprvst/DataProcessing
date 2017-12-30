@@ -3,7 +3,7 @@ function videoFrameTimes=readVideoTTLData
 %% Read TTL frame values from .csv file.
 
 [filename,dname] = uigetfile({'*.csv','.csv Files';...
-    '*.*','All Files' },'TTL Onset Data','C:\Data\Behav');
+    '*.*','All Files' },'TTL Onset Data',cd);
 cd(dname)
 fileID = fopen(filename,'r');
 
@@ -20,7 +20,7 @@ fclose(fileID);
 %% Now read times from HSCam csv file
 
 [filename,dname] = uigetfile({'*.csv','.csv Files';...
-    '*.*','All Files' },'HSCam frame times','C:\Data\Video');
+    '*.*','All Files' },'HSCam frame times',cd);
 cd(dname)
 fileID = fopen(filename,'r');
 
@@ -42,8 +42,8 @@ fclose(fileID);
 
 %% transform to milliseconds
 % if late recording, need to add 24h to relevant values
-if sum(diff(framesTimesArray{1, 1}))>0
-    dateChange=find(diff(framesTimesArray{1, 1}))+1;
+if sum(diff(int16(framesTimesArray{1, 1})))~=0
+    dateChange=find(diff(int16(framesTimesArray{1, 1})))+1;
 else 
     dateChange=[];
 end

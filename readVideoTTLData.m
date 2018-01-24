@@ -42,7 +42,7 @@ fclose(fileID);
 
 %% transform to milliseconds
 % if late recording, need to add 24h to relevant values
-if sum(diff(int16(framesTimesArray{1, 1})))~=0
+if framesTimesArray{1, 1}(1)==23 && sum(diff(int16(framesTimesArray{1, 1})))~=0
     dateChange=find(diff(int16(framesTimesArray{1, 1})))+1;
 else 
     dateChange=[];

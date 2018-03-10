@@ -1,11 +1,15 @@
 function videoFrameTimes=ReadVideoFrameTimes
-
+dirListing=dir; dirName=cd;
 %% Read times from HSCam csv file
-
-[filename,dname] = uigetfile({'*.csv','.csv Files';...
-    '*.*','All Files' },'HSCam frame times',cd);
-cd(dname)
-fileID = fopen(filename,'r');
+try
+    fileName=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,'_FrameTimes.csv'),...
+        {dirListing.name},'UniformOutput',false))).name;
+catch
+    [fileName,dirName] = uigetfile({'*.csv','.csv Files';...
+        '*.*','All Files' },'HSCam frame times',cd);
+    cd(dirName)
+end
+fileID = fopen(fileName,'r');
 
 % get file open time from first line
 fileStartTime=regexp(fgets(fileID),'\d+','match');
@@ -15,9 +19,8 @@ videoFrameTimes.fileStartTime_ms=1000*(str2double(fileStartTime{1, 4})*3600+...
 
 frewind(fileID);
 
-% Read data 
-formatSpec = '%*4u16%*1s%*2u8%*1s%*2u8%*1s%2u8%*1s%2u8%*1s%7.5f%*s';
-startRow=1;
+% Read data
+delimiter = ','; startRow=1; formatSpec = '%*4u16%*1s%*2u8%*1s%*2u8%*1s%2u8%*1s%2u8%*1s%7.5f%*s';
 framesTimesArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'HeaderLines' ,startRow-1, 'ReturnOnError', false);
 
 % Close file.
@@ -27,7 +30,7 @@ fclose(fileID);
 % if late recording, need to add 24h to relevant values
 if framesTimesArray{1, 1}(1)==23 && sum(diff(int16(framesTimesArray{1, 1})))~=0
     dateChange=find(diff(int16(framesTimesArray{1, 1})))+1;
-else 
+else
     dateChange=[];
 end
 
@@ -41,22 +44,25 @@ videoFrameTimes.frameTime_ms=videoFrameTimes.frameTime_ms-videoFrameTimes.frameT
 
 
 %% Read TTL frame values from .csv file. (if any TTL signals)
-
-[filename,dname] = uigetfile({'*.csv','.csv Files';...
-    '*.*','All Files' },'TTL Onset Data',cd);
-cd(dname)
-fileID = fopen(filename,'r');
-
-delimiter = ',';
-startRow = 0;
-formatSpec = '%f';
-
-videoFrameTimes.TTLFrames= cell2mat(textscan(fileID, formatSpec, 'Delimiter', delimiter,...
-    'HeaderLines' ,startRow, 'ReturnOnError', false, 'CollectOutput', true));
-
-% frewind(fileID);
-fclose(fileID);
-
-videoFrameTimes.TTLTimes=videoFrameTimes.frameTime_ms(videoFrameTimes.TTLFrames);
-
+try
+    fileName=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,'_TTLOnset.csv'),...
+        {dirListing.name},'UniformOutput',false))).name;
+    
+    % [fileName,dname] = uigetfile({'*.csv','.csv Files';...
+    %     '*.*','All Files' },'TTL Onset Data',cd);
+    % cd(dname)
+    fileID = fopen(fileName,'r');
+    
+    delimiter = ','; startRow = 0; formatSpec = '%f';
+    
+    videoFrameTimes.TTLFrames= cell2mat(textscan(fileID, formatSpec, 'Delimiter', delimiter,...
+        'HeaderLines' ,startRow, 'ReturnOnError', false, 'CollectOutput', true))-1; %TTL starts the frame before the detection (because of differential used)
+    
+    % frewind(fileID);
+    fclose(fileID);
+    
+    videoFrameTimes.TTLTimes=videoFrameTimes.frameTime_ms(videoFrameTimes.TTLFrames);
+catch %if file is absent from folder, assume that there were not TTL sync signals
+    [videoFrameTimes.TTLFrames, videoFrameTimes.TTLTimes]=deal([]);
+end
 end

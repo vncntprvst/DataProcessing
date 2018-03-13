@@ -108,7 +108,7 @@ end
 % Bonsai: WhiskerContactTime (first frames are skipped, so line 1 in CSV file is frame #3)
 
 %% Open result .csv file and export contact time points for alignment
-
+exportVDir='C:\Data\Video\PrV77_56_HSCamClips';cd(exportVDir);
 exportVDirListing=dir(exportVDir);
 exportVDirListing=exportVDirListing(~cellfun('isempty',strfind({exportVDirListing.name},'csv')))';
 [SweepTrialIdx,sortIdx]=sort(cellfun(@(x) str2double(regexp(x,'\d+(?=_ROIs)','match')),{exportVDirListing.name}));
@@ -182,11 +182,35 @@ for csvFile=1:size(exportVDirListingNames,1)
     %     imagesc(boolArray(1:300,8:10));
     %     subplot(1,6,6)
     %     imagesc(boolArray(1:300,5:7));
+    
+    %% create ROI ignore list
+    ignoreROIs=[];
+    for cols=0:13
+        if cols==0
+            firstIgn=20;
+        elseif cols==1
+            firstIgn=23;
+        else
+            firstIgn=26;
+        end
+        for rows=1:5
+            ignoreROIs=[ignoreROIs;rows+cols*42];
+        end
+        for rows=firstIgn:41
+            ignoreROIs=[ignoreROIs;rows+cols*42];
+        end  
+    end
+    ignoreROIs=sort(ignoreROIs);
+    
     %% 588 +1 ROIs version
     ROIactivation=zeros(size(boolArray,1),14);
+    ROIdist=zeros(size(boolArray,1),42);
     for frameIdx=1:size(boolArray,1);
-        frameActivationData(:,:,frameIdx)=reshape(boolArray(frameIdx,:),[42 14]);
+        frROIactiv=reshape(boolArray(frameIdx,:),[42 14]);
+        frROIactiv(ignoreROIs)=0;
+        frameActivationData(:,:,frameIdx)=frROIactiv;
         ROIactivation(frameIdx,:)=sum(frameActivationData(:,:,frameIdx));
+        ROIdist(frameIdx,:)=flipud(sum(frameActivationData(:,:,frameIdx),2));
     end
     lastActivFrame=find(diff(sum(ROIactivation')),1,'last');
     firstActivFrame=find(diff(sum(ROIactivation')),1,'first');
@@ -194,13 +218,30 @@ for csvFile=1:size(exportVDirListingNames,1)
     %keep panel touch index within those activation boundariess
     panelTouchIdx=find(Sweep(csvFile).panelTouchIdx(firstActivFrame:lastActivFrame));
     %% 3D figure
-    %     figure; cmap=colormap('copper'); %colormap(flipud(cmap));
-    %     surf(ROIactivation(max([1 firstActivFrame-100]):min([lastActivFrame+100 size(boolArray,1)]),:))
-    %
-    %     xlabel(gca,'Position, Left to Right ')
-    %     ylabel(gca,'Time (ms)')
-    %     zlabel(gca,'Degree of activation')
-    
+        figure; cmap=colormap('copper'); %colormap(flipud(cmap));
+        ROIactivationTimeCourse=ROIactivation(max([1 firstActivFrame-100]):min([lastActivFrame+100 size(boolArray,1)]),:);
+        surf(ROIactivationTimeCourse)
+        xlabel(gca,'Position, Left to Right ')
+        ylabel(gca,'Time (ms)')
+        zlabel(gca,'Degree of activation')
+    % image
+        figure;cmap=colormap('copper');
+        image(ROIactivationTimeCourse,'CDataMapping','scaled')
+        xlabel(gca,'Position, Left to Right ')
+        ylabel(gca,'Time (ms)')
+    %% 3D figure
+        figure; cmap=colormap('copper'); %colormap(flipud(cmap));
+        ROIactivationTimeCourse=ROIdist(max([1 firstActivFrame-100]):min([lastActivFrame+100 size(boolArray,1)]),:);
+        surf(ROIactivationTimeCourse)
+        xlabel(gca,'Depth ')
+        ylabel(gca,'Time (ms)')
+        zlabel(gca,'Degree of activation')
+    % image
+        figure;cmap=colormap('copper');
+        image(ROIactivationTimeCourse,'CDataMapping','scaled')
+        xlabel(gca,'Depth')
+        ylabel(gca,'Time (ms)')
+        
     %% Columns figure
     %     figure; colormap(copper);
     %     for ROIcol=1:14

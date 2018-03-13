@@ -1,15 +1,19 @@
-function videoFrameTimes=ReadVideoFrameTimes
-dirListing=dir; dirName=cd;
+function videoFrameTimes=ReadVideoFrameTimes(dirName)
+currentDir=cd; 
+if nargin == 0
+    dirName=cd;
+end
+dirListing=dir(dirName); 
 %% Read times from HSCam csv file
 try
     fileName=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,'_FrameTimes.csv'),...
         {dirListing.name},'UniformOutput',false))).name;
 catch
     [fileName,dirName] = uigetfile({'*.csv','.csv Files';...
-        '*.*','All Files' },'HSCam frame times',cd);
-    cd(dirName)
+        '*.*','All Files' },'HSCam frame times',dirName);
+%     cd(dirName)
 end
-fileID = fopen(fileName,'r');
+fileID = fopen(fullfile(dirName,fileName),'r');
 
 % get file open time from first line
 fileStartTime=regexp(fgets(fileID),'\d+','match');
@@ -51,7 +55,7 @@ try
     % [fileName,dname] = uigetfile({'*.csv','.csv Files';...
     %     '*.*','All Files' },'TTL Onset Data',cd);
     % cd(dname)
-    fileID = fopen(fileName,'r');
+    fileID = fopen(fullfile(dirName,fileName),'r');
     
     delimiter = ','; startRow = 0; formatSpec = '%f';
     
@@ -65,4 +69,5 @@ try
 catch %if file is absent from folder, assume that there were not TTL sync signals
     [videoFrameTimes.TTLFrames, videoFrameTimes.TTLTimes]=deal([]);
 end
+cd(currentDir);
 end

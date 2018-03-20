@@ -1,4 +1,4 @@
-function [convsdf, convrasters, convrastsem]=conv_raster(rasters,fsigma,start,stop,normepochFR)
+function [convsdf, convrasters, convrastsem]=conv_raster(rasters,fsigma,causal,start,stop,normepochFR)
 %raster averaging
 
 switch nargin
@@ -8,24 +8,23 @@ switch nargin
         stop=size(rasters,2);
         meanFR=0;
         stdFR=1;
-    case 2
+    case {2, 3}
         start=1;
         stop=size(rasters,2);
         meanFR=0;
         stdFR=1;
-    case 4
+    case 5
         meanFR=0;
         stdFR=1;
-    case 5
-        if length(normepochFR)>1
-            %bin-sized calculation of mean and std
-            bsl_bins=reshape(normepochFR,fsigma,length(normepochFR)/fsigma);
-            meanFR=mean(nanmean(bsl_bins,2)); % should be the same as nanmean(normepochFR)
-            stdFR=std(nanmean(bsl_bins,2)); % better std estimate, as std(normepochFR) just overestimates std
-        else
-            meanFR=0;
-            stdFR=normepochFR;
-        end
+    case 6
+    %bin-sized calculation of mean and std
+    bsl_bins=reshape(normepochFR,fsigma,length(normepochFR)/fsigma);
+    meanFR=mean(nanmean(bsl_bins,2)); % should be the same as nanmean(normepochFR)
+    stdFR=std(nanmean(bsl_bins,2)); % better std estimate, as std(normepochFR) just overestimates std
+end
+
+if ~exist('causal','var')
+    causal=0;
 end
 
 % need to remove NaN-containing trials
@@ -37,10 +36,10 @@ convrasters=NaN(size(rasters,1),stop-start-fsigma*6+1);
 % figure;
 % hold on
 for trial=1:size(rasters,1)
-    % 	trialnans=isnan(rasters(trial,fsigma*3+start:stop-3*fsigma));
-    convrasters(trial,:)=fullgauss_filtconv(rasters(trial,start:stop),fsigma,0).*1000;
-    %     convrasters(trial,trialnans)=NaN;
-    %     plot(convrasters(trial,:));
+% 	trialnans=isnan(rasters(trial,fsigma*3+start:stop-3*fsigma));
+    convrasters(trial,:)=fullgauss_filtconv(rasters(trial,start:stop),fsigma,causal).*1000;
+%     convrasters(trial,trialnans)=NaN;
+%     plot(convrasters(trial,:));
 end
 
 % some trials might still fall short

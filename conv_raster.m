@@ -17,10 +17,15 @@ switch nargin
         meanFR=0;
         stdFR=1;
     case 5
-    %bin-sized calculation of mean and std
-    bsl_bins=reshape(normepochFR,fsigma,length(normepochFR)/fsigma);
-    meanFR=mean(nanmean(bsl_bins,2)); % should be the same as nanmean(normepochFR)
-    stdFR=std(nanmean(bsl_bins,2)); % better std estimate, as std(normepochFR) just overestimates std
+        if length(normepochFR)>1
+            %bin-sized calculation of mean and std
+            bsl_bins=reshape(normepochFR,fsigma,length(normepochFR)/fsigma);
+            meanFR=mean(nanmean(bsl_bins,2)); % should be the same as nanmean(normepochFR)
+            stdFR=std(nanmean(bsl_bins,2)); % better std estimate, as std(normepochFR) just overestimates std
+        else
+            meanFR=0;
+            stdFR=normepochFR;
+        end
 end
 
 % need to remove NaN-containing trials
@@ -32,10 +37,10 @@ convrasters=NaN(size(rasters,1),stop-start-fsigma*6+1);
 % figure;
 % hold on
 for trial=1:size(rasters,1)
-% 	trialnans=isnan(rasters(trial,fsigma*3+start:stop-3*fsigma));
+    % 	trialnans=isnan(rasters(trial,fsigma*3+start:stop-3*fsigma));
     convrasters(trial,:)=fullgauss_filtconv(rasters(trial,start:stop),fsigma,0).*1000;
-%     convrasters(trial,trialnans)=NaN;
-%     plot(convrasters(trial,:));
+    %     convrasters(trial,trialnans)=NaN;
+    %     plot(convrasters(trial,:));
 end
 
 % some trials might still fall short
@@ -45,7 +50,7 @@ if find(isnan(convrasters))
         convrasters(stillnantrials(nant),isnan(convrasters(stillnantrials(nant),:)))=...
             nanmean(convrasters(stillnantrials(nant),...
             find(isnan(convrasters(stillnantrials(nant),:)),1)-10:find(isnan(convrasters(stillnantrials(nant),:)),1)));
-    end      
+    end
 end
 
 % convrasters=convrasters(:,fsigma*3+1:end-3*fsigma); %6 sigma ksize
@@ -59,9 +64,9 @@ convrastsem=std(convrasters)/ sqrt(size(convrasters,1));
 
 convsdf=nanmean(convrasters);
 
-% integral normalization 
+% integral normalization
 % convsdf=zscore(convsdf);
 
 % figure; plot(convrasters,'k');
 
-end              
+end

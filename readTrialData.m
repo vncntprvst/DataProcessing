@@ -33,7 +33,7 @@ frewind(fileID);
 
 %% Read data 
 % formatSpec = '%f%f%f%s%[^\n\r]';
-formatSpec = '%f%f%f%*4u16%*1s%*2u8%*1s%2u8%*1s%2u8%*1s%2u8%*1s%7.5f%*s';
+formatSpec = '%f%f%f%f%*4u16%*1s%*2u8%*1s%2u8%*1s%2u8%*1s%2u8%*1s%7.5f%*s';
 
 dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'HeaderLines' ,startRow-1, 'ReturnOnError', false);
 
@@ -43,7 +43,8 @@ fclose(fileID);
 %% Allocate imported array to column variable names
 csvFile.trialNumberIdx = int16(dataArray{:, 1});
 csvFile.trialEventType = int16(dataArray{:, 2});
-csvFile.successCount = int16(dataArray{:, 3});
+csvFile.trialOutcome = int16(dataArray{:, 3});
+csvFile.successCount = int16(dataArray{:, 4});
 % csvFile.eventTime=cellfun(@(x) regexp(x,'\d+','match'),dataArray{:, 4},'UniformOutput',false);
 
 %convert trial times to milliseconds, with exact sub-ms precision
@@ -52,13 +53,13 @@ csvFile.successCount = int16(dataArray{:, 3});
 %     csvFile.eventTime,'UniformOutput',false);
 
 % if late recording, need to add 24h to relevant values
-if sum(diff(dataArray{1, 4}))>0
-    dateChange=find(diff(dataArray{1, 4}))+1;
+if sum(diff(dataArray{1, 5}))>0
+    dateChange=find(diff(dataArray{1, 5}))+1;
 else 
     dateChange=[];
 end
 
-csvFile.eventTime_ms=1000*(double(dataArray{1, 5})*3600+double(dataArray{1, 6})*60+dataArray{1, 7});
+csvFile.eventTime_ms=1000*(double(dataArray{1, 6})*3600+double(dataArray{1, 7})*60+dataArray{1, 8});
 if ~isempty(dateChange)
     csvFile.eventTime_ms(dateChange:end)=csvFile.eventTime_ms(dateChange:end)+(24*3600*1000);
 end

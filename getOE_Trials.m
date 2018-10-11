@@ -13,15 +13,20 @@ end
 if strfind(fileName,'events')
     [~, Trials.TTL_times, info] = load_open_ephys_data(fileName);
     TTLevents=info.eventType==3;
-    TTL_ID=info.eventId(TTLevents);
+    TTL_edge=info.eventId(TTLevents);
     Trials.TTL_times=Trials.TTL_times(TTLevents); %convert to ms scale later
     disp('Trials sampling rate?')
     return
 else
     % h5disp('experiment1.kwe','/event_types/TTL')
     % TTLinfo=h5info('experiment1.kwe','/event_types/TTL');
-    TTL_ID = h5read(fileName,'/event_types/TTL/events/user_data/eventID');
-    Trials.TTL_times = h5read(fileName,'/event_types/TTL/events/time_samples');
+    TTL_edge = h5read(fileName,'/event_types/TTL/events/user_data/eventID');
+    TTL_ID = h5read(fileName,'/event_types/TTL/events/user_data/event_channels');
+    TTL_times = h5read(fileName,'/event_types/TTL/events/time_samples');
+    %%%% ASSUMING TTLs OF INTEREST ON TTL CH1 %%%%
+    TTL_edge=TTL_edge(TTL_ID==0); 
+    TTL_times=TTL_times(TTL_ID==0); 
+    Trials.TTL_times=TTL_times;
     Trials.samplingRate{1} = h5readatt(fileName,'/recordings/0/','sample_rate');
     %     Trials.TTL_times = Trials.TTL_times./uint64(Trials.samplingRate{1}/Trials.samplingRate{2}); %convert to ms scale
 end
@@ -34,7 +39,7 @@ if ~isempty(Trials.TTL_times)
     TTL_seq=diff(Trials.TTL_times)./uint64(Trials.samplingRate{1}/Trials.samplingRate{2}); % convert to ms
     TTLlength=mode(TTL_seq); %in ms
     
-    onTTL_seq=diff(Trials.TTL_times(diff([0;TTL_ID])>0))./uint64(Trials.samplingRate{1}/Trials.samplingRate{2});
+    onTTL_seq=diff(Trials.TTL_times(diff([0;TTL_edge])>0))./uint64(Trials.samplingRate{1}/Trials.samplingRate{2});
     % In behavioral recordings, task starts with double TTL (e.g., two 10ms
     % TTLs, with 10ms interval). These pulses are sent at the begining of
     % each trial(e.g.,head through front panel). One pulse is sent at the

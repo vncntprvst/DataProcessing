@@ -65,7 +65,9 @@ end
 %% if batch processing, list all directories and data files
 if exist('batchProc','var') && batchProc==true
     cd(exportDir)
-    dataFiles = dir([cd filesep '**' filesep '*.dat']);
+    dataFiles = dir([cd filesep '**' filesep '*.dat']); 
+    %% Need to make a better naming system. This is stupid
+    dataFiles=dataFiles(cellfun(@(flnm) contains(flnm,'_export'),{dataFiles.name}));
     exportDirList = {dataFiles.folder};
     exportFile =  {dataFiles.name};
     option{1}='paramsfile_noInputdlg';
@@ -83,7 +85,7 @@ if exist('batchProc','var') && batchProc==true
      fullFileNames=cellfun(@(dirName, fileName) [dirName filesep fileName],...
          exportDirList,exportFile,'UniformOutput',false);    
      fid  = fopen('SC_batch.txt','w'); 
-     formatSpec = '%s --method filtering,whitening,clustering,fitting --cpu 30\n';
+     formatSpec = '%s --method filtering,whitening,clustering,fitting --cpu 8\n';
      for rowNum = 1:size(fullFileNames,2)
          fprintf(fid,formatSpec,fullFileNames{1,rowNum});
      end
@@ -133,7 +135,9 @@ if strcmp(option{1},'paramsfile') | strcmp(option{1},'paramsfile_noInputdlg')
         userParams=inputdlg(parameterNames,dlgTitle,dims,{option{2}.userParams});
         [option{2}.userParams]=deal(userParams{:});
     end
-    option{2}(5).userParams=''; inputParams=option{2};
+    option{2}(5).userParams=''; inputParams=option{2}; 
+    %% fix mapping directory
+    %% fix .prb file not being the remapped one
     [status,cmdout]=GenerateSCParamFile(exportFile,exportDirList,inputParams,userInfo);
 end
 

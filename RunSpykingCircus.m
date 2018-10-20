@@ -66,8 +66,7 @@ end
 if exist('batchProc','var') && batchProc==true
     cd(exportDir)
     dataFiles = dir([cd filesep '**' filesep '*.dat']); 
-    %% Need to make a better naming system. This is stupid
-    dataFiles=dataFiles(cellfun(@(flnm) contains(flnm,'_export'),{dataFiles.name}));
+%     dataFiles=dataFiles(cellfun(@(flnm) contains(flnm,'_export'),{dataFiles.name}));
     exportDirList = {dataFiles.folder};
     exportFile =  {dataFiles.name};
     option{1}='paramsfile_noInputdlg';
@@ -77,7 +76,7 @@ if exist('batchProc','var') && batchProc==true
         'max_clusters';'smart_search';'smart_select';'cc_merge';...
         'dispersion';'noise_thr';'make_plots';'gpu_only';...
         'collect_all';'correct_lag';'auto_mode'},... %'max_elts','nclus_min'
-        'userParams',{'raw_binary';'30000';'int16';'32';'';'False';... %False to keep original binary file as is
+        'userParams',{'raw_binary';'30000';'int16';'32';'';'True';... %False to keep original binary file as is
         '';'3';'7';'both';'True';'True';'15';'True';'True';...
          '0.975';'2, 5';'0.9';'True';'False';'True';'True';'0.1'}); 
      
@@ -85,7 +84,8 @@ if exist('batchProc','var') && batchProc==true
      fullFileNames=cellfun(@(dirName, fileName) [dirName filesep fileName],...
          exportDirList,exportFile,'UniformOutput',false);    
      fid  = fopen('SC_batch.txt','w'); 
-     formatSpec = '%s --method filtering,whitening,clustering,fitting --cpu 8\n';
+     coreNum=num2str(feature('numcores'));
+     formatSpec = ['%s --method filtering,whitening,clustering,fitting --cpu ' coreNum '\n'];
      for rowNum = 1:size(fullFileNames,2)
          fprintf(fid,formatSpec,fullFileNames{1,rowNum});
      end

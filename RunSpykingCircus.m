@@ -66,7 +66,8 @@ end
 if exist('batchProc','var') && batchProc==true
     cd(exportDir)
     dataFiles = dir([cd filesep '**' filesep '*.dat']); 
-%     dataFiles=dataFiles(cellfun(@(flnm) contains(flnm,'_export'),{dataFiles.name}));
+    dataFiles=dataFiles(~cellfun(@(flnm) contains(flnm,{'_TTLs';'_all_sc'}),...
+    {dataFiles.name})); % just keep exported files
     exportDirList = {dataFiles.folder};
     exportFile =  {dataFiles.name};
     option{1}='paramsfile_noInputdlg';

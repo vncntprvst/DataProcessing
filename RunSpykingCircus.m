@@ -91,6 +91,9 @@ if exist('batchProc','var') && batchProc==true
          fprintf(fid,formatSpec,fullFileNames{1,rowNum});
      end
      fclose(fid); 
+else
+    exportDirList={exportDir};
+    exportFile={exportFile};
 end
 
 %% declarations

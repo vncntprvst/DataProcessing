@@ -17,7 +17,10 @@ rez = merge_posthoc2(rez);
 %% save python results file for Phy
 rezToPhy(rez, cd);
 
-%% save and clean up
+%% save
 save(fullfile(cd,  'rez.mat'), 'rez', 'ops', '-v7.3');
 
 %% add raw traces filtering option 
+
+%% run JRClust (kilosort branch)
+% jrc import-ksort /path/to/your/rez.mat sessionName % sessionName is the name typically given to the .prm file 

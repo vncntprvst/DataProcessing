@@ -19,3 +19,5 @@ rezToPhy(rez, cd);
 
 %% save and clean up
 save(fullfile(cd,  'rez.mat'), 'rez', 'ops', '-v7.3');
+
+%% add raw traces filtering option 

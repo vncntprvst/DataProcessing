@@ -20,7 +20,10 @@ elseif strfind(fileName,'events')
 %     Trials.TTL_times=Trials.TTL_times(TTLevents); %convert to ms scale later
 %     disp('Trials sampling rate?')
      return
-elseif contains(fileName,'raw.kwd')
+elseif contains(fileName,'kw')
+    if contains(fileName,'raw.kwd')
+        %get the kwe file
+    end
     % h5disp('experiment1.kwe','/event_types/TTL')
     % TTLinfo=h5info('experiment1.kwe','/event_types/TTL');
     TTL_edge = h5read(fileName,'/event_types/TTL/events/user_data/eventID');

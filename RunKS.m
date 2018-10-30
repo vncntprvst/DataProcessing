@@ -22,13 +22,13 @@ save(fullfile(cd,  [fileName '_rez.mat']), 'rez', 'ops', '-v7.3');
 %% run JRClust (kilosort branch)
 % jrc import-ksort /path/to/your/rez.mat sessionName % sessionName is the name typically given to the .prm file 
 
-%% [optional] raw traces filtering  
-clear rez
-rawTraces = memmapfile(ops.fbinary,'Format','int16');
-rawTraces=double(rawTraces.Data); 
-filtTraces=FilterTrace(rawTraces);
-fileID = fopen([fileName '_filtered.dat'],'w');
-fwrite(fileID,filtTraces,'int16');
-fclose(fileID);
+%% [optional] raw traces filtering  (JRC will filter traces to .bin files)
+% clear rez
+% rawTraces = memmapfile(ops.fbinary,'Format','int16');
+% rawTraces=double(rawTraces.Data); 
+% filtTraces=FilterTrace(rawTraces);
+% fileID = fopen([fileName '_filtered.dat'],'w');
+% fwrite(fileID,filtTraces,'int16');
+% fclose(fileID);
 
 

@@ -1,4 +1,4 @@
-function rez=RunKS(ops)
+function rez=RunKS(ops,fileName)
 
 %% run generated config file to create ops
 % e.g., config_vIRt22_2018-10-16_19-11-34_5100_50ms1Hz10mW_nopp
@@ -17,9 +17,18 @@ rez = merge_posthoc2(rez);
 rezToPhy(rez, cd);
 
 %% save
-save(fullfile(cd,  'rez.mat'), 'rez', 'ops', '-v7.3');
-
-%% add raw traces filtering option 
+save(fullfile(cd,  [fileName '_rez.mat']), 'rez', 'ops', '-v7.3');
 
 %% run JRClust (kilosort branch)
 % jrc import-ksort /path/to/your/rez.mat sessionName % sessionName is the name typically given to the .prm file 
+
+%% [optional] raw traces filtering  
+clear rez
+rawTraces = memmapfile(ops.fbinary,'Format','int16');
+rawTraces=double(rawTraces.Data); 
+filtTraces=FilterTrace(rawTraces);
+fileID = fopen([fileName '_filtered.dat'],'w');
+fwrite(fileID,filtTraces,'int16');
+fclose(fileID);
+
+

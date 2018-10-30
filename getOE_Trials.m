@@ -13,7 +13,10 @@ end
 if contains(fileName,'channel_states.npy')
     currentDir=cd;
     % go to directory first
-    cd(['..' filesep '..' filesep 'events' filesep 'Rhythm_FPGA-100.0' filesep 'TTL_1']);
+    try
+        cd(['..' filesep '..' filesep 'events' filesep 'Rhythm_FPGA-100.0' filesep 'TTL_1']);
+    catch %%may already be there
+    end
     TTL_edge= readNPY(fileName);
     TTL_ID = readNPY('channels.npy');
     TTL_times = double(readNPY('timestamps.npy'));

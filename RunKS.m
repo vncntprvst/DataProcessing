@@ -1,4 +1,6 @@
-%% generated config file to create ops
+function rez=RunKS(ops)
+
+%% run generated config file to create ops
 % e.g., config_vIRt22_2018-10-16_19-11-34_5100_50ms1Hz10mW_nopp
 % see DataExportGUI
 
@@ -8,13 +10,10 @@ rez                = fitTemplates(rez, DATA, uproj);  % fit templates iterativel
 rez                = fullMPMU(rez, DATA);% extract final spike times (overlapping extraction)
 
 %% spk2 add-ons %%
-%% save python results file for Phy
-rezToPhy(rez, cd);
-
-%% Auto merge
+%% [optional] Auto merge
 rez = merge_posthoc2(rez);
 
-%% save python results file for Phy
+%% [optional] save python results file for Phy
 rezToPhy(rez, cd);
 
 %% save

@@ -1,17 +1,25 @@
-function videoFrameTimes=ReadVideoFrameTimes(dirName)
+function videoFrameTimes=ReadVideoFrameTimes(recordingName,dirName)
 currentDir=cd; 
-if nargin == 0
-    dirName=cd;
+switch nargin
+    case 0
+        recordingName=[];
+        dirName=cd;
+    case 1
+        dirName=cd;
 end
-dirListing=dir(dirName); 
-%% Read times from HSCam csv file
-try
-    fileName=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,'_FrameTimes.csv'),...
-        {dirListing.name},'UniformOutput',false))).name;
-catch
-    [fileName,dirName] = uigetfile({'*.csv','.csv Files';...
-        '*.*','All Files' },'HSCam frame times',dirName);
-%     cd(dirName)
+    dirListing=dir(dirName);
+if isempty(recordingName) 
+    %% Read times from HSCam csv file
+    try
+        fileName=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,'_FrameTimes.csv'),...
+            {dirListing.name},'UniformOutput',false))).name;
+    catch
+        [fileName,dirName] = uigetfile({'*.csv','.csv Files';...
+            '*.*','All Files' },'HSCam frame times',dirName);
+        %     cd(dirName)
+    end
+else
+    fileName=recordingName;
 end
 fileID = fopen(fullfile(dirName,fileName),'r');
 
@@ -49,9 +57,13 @@ videoFrameTimes.frameTime_ms=videoFrameTimes.frameTime_ms-videoFrameTimes.frameT
 
 %% Read TTL frame values from .csv file. (if any TTL signals)
 try
-    fileName=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,'_TTLOnset.csv'),...
-        {dirListing.name},'UniformOutput',false))).name;
-    
+    if isempty(recordingName)
+        fileName=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,'_TTLOnset.csv'),...
+            {dirListing.name},'UniformOutput',false))).name;
+    else
+        fileName=[recordingName(1:end-4) '_TTLOnset.csv'];
+    end
+
     % [fileName,dname] = uigetfile({'*.csv','.csv Files';...
     %     '*.*','All Files' },'TTL Onset Data',cd);
     % cd(dname)

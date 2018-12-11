@@ -1,4 +1,4 @@
-function frameTimetable=readVFrameTime(csvFile,dName,formatSpec)
+function whiskerStim_FrameIdx=GetFrame_WhiskerTouch(csvFile,dName,formatSpec)
 %% Import frame data from video's csv file.
 
 %% Initialize variables.
@@ -28,18 +28,10 @@ if fileID==-1
     fileID = fopen([dName csvFile{:}],'r');
 end
 
-%% get file open time from first line
-fileCreateTime=regexp(fgets(fileID),'\d+','match');
-frameTimetable.fileRecordingDate=datetime([fileCreateTime{1} '-' fileCreateTime{2} '-' fileCreateTime{3}]);
-frameTimetable.fileCreateTime=hours(str2double(fileCreateTime{4})) + ...
-    minutes(str2double(fileCreateTime{5})) + ...
-    seconds(str2double([fileCreateTime{6} '.' fileCreateTime{7}]));
-frameTimetable.fileCreateTimeSubMilli=str2double(fileCreateTime{7});
-frewind(fileID);
-
 %% Read data 
-if ~exist('formatSpec',var)
-    formatSpec = '%*4u16%*1s%*2u8%*1s%2u8%*1s%2u8%*1s%2u8%*1s%7.5f%*s';
+if ~exist('formatSpec','var')
+    formatSpec = '%s';
+%     formatSpec = '%*4u16%*1s%*2u8%*1s%2u8%*1s%2u8%*1s%2u8%*1s%7.5f%*s';
 % formatSpec = '%{yyyy-mm-dd}D%*1s%2u8%*1s%2u8%*1s%6.4f%s%[^\n\r]'; 
 end
 dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'HeaderLines' ,startRow-1, 'ReturnOnError', false);
@@ -47,15 +39,7 @@ dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'HeaderLines' ,
 %% Close file.
 fclose(fileID);
 
-%% get frame times
-% if late recording, need to add 24h to relevant values
-if sum(diff(dataArray{1, 1}))>0
-    dateChange=find(diff(dataArray{1, 1}))+1;
-else 
-    dateChange=[];
-end
-
-frameTimetable.frameTimes_ms=1000*(double(dataArray{1, 2})*3600+double(dataArray{1, 3})*60+dataArray{1, 4});
-if ~isempty(dateChange)
-    frameTimetable.frameTimes_ms(dateChange:end)=frameTimetable.frameTimes_ms(dateChange:end)+(24*3600);
-end
+string2boolean = @(s) ~strcmpi(s, 'false');
+whiskerStim_FrameIdx=cellfun(@(frameROIs) cellfun(@(eachRoi) string2boolean(eachRoi),...
+    regexp(frameROIs,'\w+','match')),dataArray{:},'UniformOutput',false);
+whiskerStim_FrameIdx=vertcat(whiskerStim_FrameIdx{:});

@@ -30,14 +30,19 @@ end
 % need to remove NaN-containing trials
 rasters=rasters(~isnan(mean(rasters(:,fsigma*3+start:stop-3*fsigma),2)),:);
 % allocating
-convrasters=NaN(size(rasters,1),stop-start-fsigma*6+1);
+convrasters=NaN(size(rasters,1),stop(1)-start(1)-fsigma*6+1);
 % convrasters=NaN(size(rasters,1),stop-start+1); %when switching convolution shape to 'same'
 
 % figure;
 % hold on
 for trial=1:size(rasters,1)
 % 	trialnans=isnan(rasters(trial,fsigma*3+start:stop-3*fsigma));
-    convrasters(trial,:)=fullgauss_filtconv(rasters(trial,start:stop),fsigma,causal).*1000;
+    if numel(start)==1
+        convrasters(trial,:)=fullgauss_filtconv(rasters(trial,start:stop),fsigma,causal).*1000;
+    else
+            convrasters(trial,:)=fullgauss_filtconv(rasters(trial,start(trial):stop(trial)),...
+                fsigma,causal).*1000;
+    end
 %     convrasters(trial,trialnans)=NaN;
 %     plot(convrasters(trial,:));
 end

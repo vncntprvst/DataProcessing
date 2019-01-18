@@ -3,14 +3,16 @@
 rootDir=cd;
 [dataFiles,allRecInfo]=BatchExport;
 % then move to spike sorting folder
-cd(fullfile(rootDir,'SpikeSortingFolder'));
+%cd(fullfile(rootDir,'SpikeSortingFolder'));
 for fileNum=1:size(dataFiles,1)
+    
     %% get recording's info
     recInfo = allRecInfo{fileNum}; %[recordingName '_recInfo'];
     %% create configuration file for KiloSort
     useGPU=1;
     userParams.useGPU=num2str(useGPU);
-    [status,cmdout]=GenerateKSConfigFile([recInfo.recordingName '_export'],cd,userParams);
+    [status,cmdout]=GenerateKSConfigFile([recInfo.recordingName '_export'],...
+        [cd filesep recInfo.recordingName],userParams);
     if status~=1
         disp('problem generating the configuration file')
     else
@@ -19,6 +21,7 @@ for fileNum=1:size(dataFiles,1)
     
     %% create ChannelMap file for KiloSort
     % load probe file
+%     currentDir=cd;  cd ..
     dirlisting = dir(cd);
     dirlisting = {dirlisting(:).name};
     probeFileName=dirlisting{cellfun(@(x) contains(x,'Probe'),dirlisting)};
@@ -71,8 +74,9 @@ for fileNum=1:size(dataFiles,1)
         end
     end
     
-    [cmdout,status]=GenerateKSChannelMap(recInfo.recordingName,cd,probeInfo,...
-        recInfo.samplingRate);
+%     cd(currentDir)
+    [cmdout,status]=GenerateKSChannelMap(recInfo.recordingName,...
+        [cd filesep recInfo.recordingName],probeInfo,recInfo.samplingRate);
     if status~=1
         disp('problem generating the configuration file')
     else
@@ -81,14 +85,18 @@ for fileNum=1:size(dataFiles,1)
     
     %% Run KiloSort
     % First run generated configuration file to instantiate 'ops'
-    run(['config_' recInfo.recordingName '_export.m']) %something like that
+    cd(recInfo.recordingName)
+    run(['config_' recInfo.recordingName '_export.m']) 
     RunKS(ops,recInfo.recordingName);
+    cd ..
 end
 
 for fileNum=1:size(dataFiles,1)
     %% get recording's info
     recInfo = allRecInfo{fileNum}; %[recordingName '_recInfo'];
+    cd([recInfo.recordingName])
     %% run JRClust (kilosort branch)
     % jrc import-ksort /path/to/your/rez.mat sessionName % sessionName is the name typically given to the .prm file
     eval(['jrc import-ksort ' recInfo.recordingName '_rez.mat ' recInfo.recordingName])
+    cd ..
 end

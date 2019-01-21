@@ -19,12 +19,15 @@ if contains(fileName,'channel_states.npy')
     end
     TTL_edge= readNPY(fileName);
     TTL_ID = readNPY('channels.npy');
+    TTL_channels=unique(TTL_ID);
     TTL_times = double(readNPY('timestamps.npy'));
-    %%%% ASSUMING TTLs OF INTEREST ON TTL CH1, here TTL_ID 1 %%%%
-    TTL_edge=TTL_edge(TTL_ID==1); 
-    TTL_times=TTL_times(TTL_ID==1); 
-    Trials.TTL_times=TTL_times;
-    Trials.samplingRate{1} = 30000; %change when XML reader is done
+    % Typically, stimulation TTLs on TTL Ch1 (TTL_ID 1), and video sync on Ch2 %
+    for TTLchanNum=1:numel(TTL_channels)
+        TTLch_edge{TTLchanNum}=TTL_edge(TTL_ID==TTL_channels(TTLchanNum));
+        TTLch_times=TTL_times(TTL_ID==TTL_channels(TTLchanNum));
+        Trials{TTLchanNum}.TTL_times=TTLch_times;
+        Trials{TTLchanNum}.samplingRate{1} = 30000; %change when XML reader is done
+    end
     cd(currentDir)
 elseif contains(fileName,'events')
     [~, Trials.TTL_times, info] = load_open_ephys_data(fileName);
@@ -38,80 +41,89 @@ elseif contains(fileName,'.kw')
     % TTLinfo=h5info('experiment1.kwe','/event_types/TTL');
     TTL_edge = h5read(fileName,'/event_types/TTL/events/user_data/eventID');
     TTL_ID = h5read(fileName,'/event_types/TTL/events/user_data/event_channels');
+    TTL_channels=unique(TTL_ID);
     TTL_times = double(h5read(fileName,'/event_types/TTL/events/time_samples'));
-    %%%% ASSUMING TTLs OF INTEREST ON TTL CH1, here TTL_ID 0 %%%%
-    TTL_edge=TTL_edge(TTL_ID==0); 
-    TTL_times=TTL_times(TTL_ID==0); 
-    Trials.TTL_times=TTL_times;
-    Trials.samplingRate{1} = h5readatt(fileName,'/recordings/0/','sample_rate');
+    % Typically, stimulation TTLs on TTL Ch1 (TTL_ID 0), and video sync on Ch2 %
+    for TTLchanNum=1:numel(TTL_channels)
+        TTL_edge=TTL_edge(TTL_ID==0);
+        TTL_times=TTL_times(TTL_ID==0);
+        Trials{TTLchanNum}.TTL_times=TTL_times;
+        Trials{TTLchanNum}.samplingRate{1} = h5readatt(fileName,'/recordings/0/','sample_rate');
+    end
     %     Trials.TTL_times = Trials.TTL_times./uint64(Trials.samplingRate{1}/Trials.samplingRate{2}); %convert to ms scale
 end
 
 % keep absolute time of TTL onset
 % Trials.TTL_times=Trials.TTL_times(diff([0;TTL_ID])>0);
 % TTL sequence (in ms)
-Trials.samplingRate{2} = 1000;
-if ~isempty(Trials.TTL_times)
-    TTL_seq=diff(Trials.TTL_times)./(Trials.samplingRate{1}/Trials.samplingRate{2}); % convert to ms
-    TTLlength=mode(TTL_seq); %in ms
-    
-    onTTL_seq=diff(Trials.TTL_times(diff([0;TTL_edge])>0))./(Trials.samplingRate{1}/Trials.samplingRate{2});
-    
-    % In behavioral recordings, task starts with double TTL (e.g., two 10ms
-    % TTLs, with 10ms interval). These pulses are sent at the begining of
-    % each trial(e.g.,head through front panel). One pulse is sent at the
-    % end of each trial. With sampling rate of 30kHz, that interval should
-    % be 601 samples (20ms*30+1). Or 602 accounting for jitter.
-    % onTTL_seq at native sampling rate should thus read as:
-    %   601
-    %   end of trial time
-    %   inter-trial interval
-    %   601 ... etc
-    
-    % In Stimulation recordings, there are only Pulse onsets, i.e., not
-    % double TTL to start, followed TTL to end. There may be pulse trains with 
-    % intertrain interval
-    
-    if TTL_seq(1)>=TTLlength+10 %missed first trial initiation, discard times
-        TTL_seq(1)=TTLlength+300;
-        onTTL_seq(1)=TTLlength+300;
-    end
-    if TTL_seq(end-1)<=TTLlength+10 %unfinished last trial
-        TTL_seq(end)=TTLlength+300;
-        onTTL_seq(end)=TTLlength+300;
-    end
-    
-    allTrialTimes=Trials.TTL_times([1; find(bwlabel([0;diff(TTL_seq)]))+1]);
-    if  size(unique(onTTL_seq),1)>=10 %behavioral recordings start: ON/OFF ON/OFF .... end: ON/OFF
-                                      % with varying delay within trials
-        Trials.start=allTrialTimes(1:2:end);
-        Trials.end=allTrialTimes(2:2:end);
-        try
-            Trials.interval=Trials.end(1:end-1)-Trials.start(2:end);
-        catch
-            Trials.interval=mode(diff(allTrialTimes)); %
+for TTLchanNum=1:numel(Trials)
+    Trials{TTLchanNum}.samplingRate{2} = 1000;
+    if ~isempty(Trials{TTLchanNum}.TTL_times)
+        TTL_seq=diff(Trials{TTLchanNum}.TTL_times)./(Trials{TTLchanNum}.samplingRate{1}/Trials{TTLchanNum}.samplingRate{2}); % convert to ms
+        TTLlength=mode(TTL_seq); %in ms
+        
+        onTTL_seq=diff(Trials{TTLchanNum}.TTL_times(diff([0;TTLch_edge{TTLchanNum}])>0))./(Trials{TTLchanNum}.samplingRate{1}/Trials{TTLchanNum}.samplingRate{2});
+        
+        % In behavioral recordings, task starts with double TTL (e.g., two 10ms
+        % TTLs, with 10ms interval). These pulses are sent at the begining of
+        % each trial(e.g.,head through front panel). One pulse is sent at the
+        % end of each trial. With sampling rate of 30kHz, that interval should
+        % be 601 samples (20ms*30+1). Or 602 accounting for jitter.
+        % onTTL_seq at native sampling rate should thus read as:
+        %   601
+        %   end of trial time
+        %   inter-trial interval
+        %   601 ... etc
+        
+        % In Stimulation recordings, there are only Pulse onsets, i.e., not
+        % double TTL to start, followed TTL to end. There may be pulse trains with
+        % intertrain interval
+        
+        if TTL_seq(1)>=TTLlength+10 %missed first trial initiation, discard times
+            TTL_seq(1)=TTLlength+300;
+            onTTL_seq(1)=TTLlength+300;
         end
-        if numel(Trials.end)<numel(Trials.start)
-            if diff([numel(Trials.end),numel(Trials.start)])==1
-                Trials.end(end+1)=Trials.end(end)+Trials.interval(end);
-            else %problem
-                return
+        if TTL_seq(end-1)<=TTLlength+10 %unfinished last trial
+            TTL_seq(end)=TTLlength+300;
+            onTTL_seq(end)=TTLlength+300;
+        end
+        
+        allTrialTimes=Trials{TTLchanNum}.TTL_times([1; find(bwlabel([0;diff(TTL_seq)]))+1]);
+        if  size(unique(onTTL_seq),1)>=10 %behavioral recordings start: ON/OFF ON/OFF .... end: ON/OFF
+            % with varying delay within Trials
+            Trials{TTLchanNum}.start=allTrialTimes(1:2:end);
+            Trials{TTLchanNum}.end=allTrialTimes(2:2:end);
+            try
+                Trials{TTLchanNum}.interval=Trials{TTLchanNum}.end(1:end-1)-Trials{TTLchanNum}.start(2:end);
+            catch
+                Trials{TTLchanNum}.interval=mode(diff(allTrialTimes)); %
             end
+            if numel(Trials{TTLchanNum}.end)<numel(Trials{TTLchanNum}.start)
+                if diff([numel(Trials{TTLchanNum}.end),numel(Trials{TTLchanNum}.start)])==1
+                    Trials{TTLchanNum}.end(end+1)=Trials{TTLchanNum}.end(end)+Trials{TTLchanNum}.interval(end);
+                else %problem
+                    return
+                end
+            end
+        elseif size(unique(onTTL_seq),1)<10 %stimulation recordings: trial ends when stimulation ends start: ON, end: OFF
+            Trials{TTLchanNum}.start=Trials{TTLchanNum}.TTL_times([TTL_seq<=TTLlength*2+10;false]);%Trials{TTLchanNum}.start=Trials{TTLchanNum}.start./uint64(SamplingRate/1000)
+            Trials{TTLchanNum}.end=Trials{TTLchanNum}.TTL_times([false;TTL_seq<=TTLlength*2+10]);
+            Trials{TTLchanNum}.interval=onTTL_seq; %
         end
-    elseif size(unique(onTTL_seq),1)<10 %stimulation recordings: trial ends when stimulation ends start: ON, end: OFF
-        Trials.start=Trials.TTL_times([TTL_seq<=TTLlength*2+10;false]);%Trials.start=Trials.start./uint64(SamplingRate/1000)
-        Trials.end=Trials.TTL_times([false;TTL_seq<=TTLlength*2+10]);
-        Trials.interval=onTTL_seq; %
+        
+        %convert to ms
+        Trials{TTLchanNum}.start(:,2)=Trials{TTLchanNum}.start(:,1)./(Trials{TTLchanNum}.samplingRate{1}/Trials{TTLchanNum}.samplingRate{2});
+        Trials{TTLchanNum}.end(:,2)=Trials{TTLchanNum}.end(:,1)./(Trials{TTLchanNum}.samplingRate{1}/Trials{TTLchanNum}.samplingRate{2});
+        if ~isempty(Trials{TTLchanNum}.interval)
+            Trials{TTLchanNum}.interval(:,2)=Trials{TTLchanNum}.interval./(Trials{TTLchanNum}.samplingRate{1}/Trials{TTLchanNum}.samplingRate{2});
+        end
+    else
+        Trials{TTLchanNum}.start=[];
+        Trials{TTLchanNum}.end=[];
+        Trials{TTLchanNum}.interval=[];
     end
-    
-    %convert to ms
-    Trials.start(:,2)=Trials.start(:,1)./(Trials.samplingRate{1}/Trials.samplingRate{2});
-    Trials.end(:,2)=Trials.end(:,1)./(Trials.samplingRate{1}/Trials.samplingRate{2});
-    if ~isempty(Trials.interval)
-        Trials.interval(:,2)=Trials.interval./(Trials.samplingRate{1}/Trials.samplingRate{2});
-    end
-else
-    Trials.start=[];
-    Trials.end=[];
-    Trials.interval=[];
+end
+
+if numel(Trials)==1
+    Trials=Trials{:};
 end

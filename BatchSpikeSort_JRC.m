@@ -1,21 +1,27 @@
-%% Export .dat file with BatchExport
-% go to data session's root directory
-rootDir=cd;
+%% Export .dat files with BatchExport
+% start from data session's root directory
 [dataFiles,allRecInfo]=BatchExport;
-% then move to spike sorting folder
-%cd(fullfile(rootDir,'SpikeSortingFolder'));
 save('fileInfo','dataFiles','allRecInfo');
+
+%% generate prb, meta and prm files. Create batch file
+% open batch file
+upDirs=regexp(cd,'(?<=\/).+?(?=\/)','match');
+batchFileID = fopen([upDirs{end} '.batch'],'w');
+% loop through all session's recordings
 for fileNum=1:size(dataFiles,1)
     
     %% get recording's info
     recInfo = allRecInfo{fileNum}; %[recordingName '_recInfo'];
+    if isempty(recInfo)
+        continue
+    end
     %% create probe and parameter files for JRClust
     % load probe file
     %     currentDir=cd;  cd ..
-    dirlisting = dir(cd);
-    dirlisting = {dirlisting(:).name};
-    probeFileName=dirlisting{cellfun(@(x) contains(x,'Probe'),dirlisting)};
-    if ~isempty(dirlisting)
+    dirListing = dir(cd);
+    dirListing = {dirListing(:).name};
+    probeFileName=dirListing{cellfun(@(x) contains(x,'Probe'),dirListing)};
+    if ~isempty(dirListing)
         probeLayout=load(probeFileName);
     else
         % ask where the probe file is
@@ -47,49 +53,52 @@ for fileNum=1:size(dataFiles,1)
         probeParams.shanks=[recInfo.probeLayout.Shank];
         probeParams.shanks=probeParams.shanks(~cellfun('isempty',{recInfo.probeLayout.Electrode}) &...
             ~isnan([recInfo.probeLayout.Shank]));
-        xcoords = zeros(1,probeParams.numChannels);
-        ycoords = 200 * ones(1,probeParams.numChannels);
-        groups=unique(probeParams.shanks);
-        for elGroup=1:length(groups)
-            if isnan(groups(elGroup)) || groups(elGroup)==0
-                continue;
+        if isfield(recInfo.probeLayout,'x_geom')
+            xcoords=[recInfo.probeLayout.x_geom];
+            ycoords=[recInfo.probeLayout.y_geom];
+        else
+            xcoords = zeros(1,probeParams.numChannels);
+            ycoords = 200 * ones(1,probeParams.numChannels);
+            groups=unique(probeParams.shanks);
+            for elGroup=1:length(groups)
+                if isnan(groups(elGroup)) || groups(elGroup)==0
+                    continue;
+                end
+                groupIdx=find(probeParams.shanks==groups(elGroup));
+                xcoords(groupIdx(2:2:end))=20;
+                xcoords(groupIdx)=xcoords(groupIdx)+(0:length(groupIdx)-1);
+                ycoords(groupIdx)=...
+                    ycoords(groupIdx)*(elGroup-1);
+                ycoords(groupIdx(round(end/2)+1:end))=...
+                    ycoords(groupIdx(round(end/2)+1:end))+20;
             end
-            groupIdx=find(probeParams.shanks==groups(elGroup));
-            xcoords(groupIdx(2:2:end))=20;
-            xcoords(groupIdx)=xcoords(groupIdx)+(0:length(groupIdx)-1);
-            ycoords(groupIdx)=...
-                ycoords(groupIdx)*(elGroup-1);
-            ycoords(groupIdx(round(end/2)+1:end))=...
-                ycoords(groupIdx(round(end/2)+1:end))+20;
         end
-        
         probeParams.geometry=[xcoords;ycoords]';
         
     else
     end
     
     %move to export folder
+    dirListing = dir(cd);
     exportFolder=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,allRecInfo{fileNum}.recordingName),...
         {dirListing.name},'UniformOutput',false))).name;
     cd(exportFolder);
-    
+    % Generate probe file
     [status,cmdout]=GenerateJRClustProbeFile(probeParams); %recInfo.exportname
     
     if status~=1
         disp('problem generating the probe file')
     else
         disp(cmdout)
-        disp('creating parameter file for JRClust')
-        % keep the GUI's directory because JRClust will revert the
-        % environment to its native state
-        exportGUIDir=mfilename('fullpath');
+        
         % find data and probe files
         dirListing=dir(cd);
         exportFileName=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,'export.dat'),...
             {dirListing.name},'UniformOutput',false))).name;
         probeFileName=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,'.prb'),...
             {dirListing.name},'UniformOutput',false))).name;
-        %% Generate .meta file 
+        
+        %% Generate .meta file
         %Sampling rate (Hz): read from imSampRate (or niSampRate for NI recordings) in .meta file
         % # channels saved: read from nSavedChans in .meta file
         % Microvolts per bit (uV/bit): computed from imAiRangeMax, imAiRangeMin and vnIMRO (or niMNGain for NI recordings) in .meta file
@@ -104,53 +113,44 @@ for fileNum=1:size(dataFiles,1)
         
         oeSampRate = 30000;
         nSavedChans = probeParams.numChannels;
-        %For Open Ephys
-        oeAiRangeMax = 1.225;%allRecInfo{fileNum}.bitResolution; %0.195 OE; %0.25 for BR
+        %For Open Ephys %0.195 OE; %0.25 for BR
+        oeAiRangeMax = 1.225;%allRecInfo{fileNum}.bitResolution;
         oeAiRangeMin = -1.225; % total range 2.45
         oeroTbl=[192,192];
         
         fileID = fopen([exportFileName(1:end-4) '.meta'],'w');
-        fprintf(fileID,'oeSampRate = %d\r',imSampRate );
+        fprintf(fileID,'oeSampRate = %d\r',oeSampRate );
         fprintf(fileID,'nSavedChans = %d\r',nSavedChans );
-        fprintf(fileID,'oeAiRangeMax = %1.3f\r',imAiRangeMax );
-        fprintf(fileID,'oeAiRangeMin = %1.3f\r',imAiRangeMin );
+        fprintf(fileID,'oeAiRangeMax = %1.3f\r',oeAiRangeMax );
+        fprintf(fileID,'oeAiRangeMin = %1.3f\r',oeAiRangeMin );
         fprintf(fileID,'oeroTbl = %d, %d\r',oeroTbl );
         fclose(fileID);
-        global fDebug_ui
-        fDebug_ui=1; % so that fAsk =0 (removes warnings and prompts)
-        jrc('makeprm',exportFileName,probeFileName);
-        clear global 
-        % set the GUI's path back
-%         addpath(cell2mat(regexp(exportGUIDir,['.+(?=\' filesep ')'],'match')));
+        
+        %% make parameter file
+        % get name of TTL file, to edit params file
+        vcFile_trial = cellfun(@(fileFormat) dir([cd filesep fileFormat]),...
+            {'*.csv'},'UniformOutput', false);
+        if isempty(vcFile_trial{:})
+            vcFile_trial='';
+        else
+            vcFile_trial=vcFile_trial{1}.name;
+        end
+        [paramFStatus,cmdout]=GenerateJRCParamFile(exportFileName,...
+            probeFileName,{'vcFile_trial',vcFile_trial});
+        
+        %edit param file to include sync file
+        
+        %% save prm file name to batch list
+        fprintf(batchFileID,'%s\r',fullfile(cd,...
+            [exportFileName(1:end-4) '_' probeFileName(1:end-4) '.prm']));
+        
     end
-    
-end
-
-%% Batch file for JRCust
-% jrc batch myparam123.batch
-% Content of myparam123.batch:
-%
-%     myparam1.prm
-%     myparam2.prm
-%     myparam3.prm
-%
-% Alternatively, a user can supply a list of .bin files in the batch file using a parameter file "myparam.prm" by running
-%
-%     jrc batch mybin123.batch myparam.prm
-%
-% Content of mybin123.batch:
-%
-%     mybin1.bin
-%     mybin2.bin
-%     mybin3.bin
-
-
-for fileNum=1:size(dataFiles,1)
-    %% get recording's info
-    recInfo = allRecInfo{fileNum}; %[recordingName '_recInfo'];
-    cd([recInfo.recordingName])
-    %% run JRClust (kilosort branch)
-    % jrc import-ksort /path/to/your/rez.mat sessionName % sessionName is the name typically given to the .prm file
-    eval(['jrc import-ksort ' recInfo.recordingName '_rez.mat ' recInfo.recordingName])
+    % go back to root dir
     cd ..
 end
+fclose(batchFileID);
+
+%% run JRClust on batch file
+clearvars; clearvars -global;
+upDirs=regexp(cd,'(?<=\/).+?(?=\/)','match');
+jrc('batch',[upDirs{end} '.batch']);

@@ -1,7 +1,7 @@
 %% Export .dat files with BatchExport
 % start from data session's root directory
-[dataFiles,allRecInfo]=BatchExport;
-save('fileInfo','dataFiles','allRecInfo');
+% [dataFiles,allRecInfo]=BatchExport;
+% save('fileInfo','dataFiles','allRecInfo');
 
 %% generate prb, meta and prm files. Create batch file
 % open batch file
@@ -127,16 +127,23 @@ for fileNum=1:size(dataFiles,1)
         fclose(fileID);
         
         %% make parameter file
-        % get name of TTL file, to edit params file
+        % set parameters (e.g., name of TTL file), to edit params file
+        % #Trial (used for plotting PSTH for each unit after clustering)
+
         vcFile_trial = cellfun(@(fileFormat) dir([cd filesep fileFormat]),...
             {'*.csv'},'UniformOutput', false);
         if isempty(vcFile_trial{:})
-            vcFile_trial='';
+            inputParams=[];
         else
             vcFile_trial=vcFile_trial{1}.name;
+            inputParams={'vcFile_trial',['''' vcFile_trial ''''];...
+                'tlim_psth','[-0.2, 0.2]';...% [-1, 5]; % Time range to display PSTH (in seconds)
+                'tbin_psth','0.001'; ... %0.01;% Time bin for the PSTH histogram (in seconds)
+                'xtick_psth','0.01';... % 0.2;			% PSTH time tick mark spacing
+                'nSmooth_ms_psth','10'}; % 50;			% PSTH smoothing time window (in milliseconds)
         end
         [paramFStatus,cmdout]=GenerateJRCParamFile(exportFileName,...
-            probeFileName,{'vcFile_trial',vcFile_trial});
+            probeFileName,inputParams);
         
         %edit param file to include sync file
         
@@ -151,6 +158,6 @@ end
 fclose(batchFileID);
 
 %% run JRClust on batch file
-clearvars; clearvars -global;
+clearvars; clearvars -global; % if more crashes on Linux, start Matlab with software opengl (./matlab -softwareopengl)
 upDirs=regexp(cd,'(?<=\/).+?(?=\/)','match');
 jrc('batch',[upDirs{end} '.batch']);

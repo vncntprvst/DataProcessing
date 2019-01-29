@@ -57,12 +57,30 @@ end
 % Trials.TTL_times=Trials.TTL_times(diff([0;TTL_ID])>0);
 % TTL sequence (in ms)
 for TTLchanNum=1:numel(Trials)
+    pulseDur=mode(diff(Trials{TTLchanNum}.TTL_times)./...
+            (Trials{TTLchanNum}.samplingRate{1}/1000));
+    if pulseDur==1 && TTLchanNum>1  % video sync signal, not trials or stim
+        Trials{TTLchanNum}=[Trials{TTLchanNum}.TTL_times';...
+            int32(TTLch_edge{TTLchanNum}')];
+    else
     Trials{TTLchanNum}.samplingRate{2} = 1000;
     if ~isempty(Trials{TTLchanNum}.TTL_times)
-        TTL_seq=diff(Trials{TTLchanNum}.TTL_times)./(Trials{TTLchanNum}.samplingRate{1}/Trials{TTLchanNum}.samplingRate{2}); % convert to ms
+        TTL_seq=int32(diff(Trials{TTLchanNum}.TTL_times)./...
+            (Trials{TTLchanNum}.samplingRate{1}/...
+            Trials{TTLchanNum}.samplingRate{2})); % convert to ms
         TTLlength=mode(TTL_seq); %in ms
         
-        onTTL_seq=diff(Trials{TTLchanNum}.TTL_times(diff([0;TTLch_edge{TTLchanNum}])>0))./(Trials{TTLchanNum}.samplingRate{1}/Trials{TTLchanNum}.samplingRate{2});
+        if TTLch_edge{TTLchanNum}(1)>0
+            onTTL_seq=int32(diff(Trials{TTLchanNum}.TTL_times(...
+                diff([0;TTLch_edge{TTLchanNum}])>0))./...
+                (Trials{TTLchanNum}.samplingRate{1}/...
+                Trials{TTLchanNum}.samplingRate{2}));
+        else
+            onTTL_seq=int32(diff(Trials{TTLchanNum}.TTL_times(...
+                diff([0;TTLch_edge{TTLchanNum}])<0))./...
+                (Trials{TTLchanNum}.samplingRate{1}/...
+                Trials{TTLchanNum}.samplingRate{2}));
+        end
         
         % In behavioral recordings, task starts with double TTL (e.g., two 10ms
         % TTLs, with 10ms interval). These pulses are sent at the begining of
@@ -94,13 +112,15 @@ for TTLchanNum=1:numel(Trials)
             Trials{TTLchanNum}.start=allTrialTimes(1:2:end);
             Trials{TTLchanNum}.end=allTrialTimes(2:2:end);
             try
-                Trials{TTLchanNum}.interval=Trials{TTLchanNum}.end(1:end-1)-Trials{TTLchanNum}.start(2:end);
+                Trials{TTLchanNum}.interval=Trials{TTLchanNum}.end(1:end-1)-...
+                    Trials{TTLchanNum}.start(2:end);
             catch
                 Trials{TTLchanNum}.interval=mode(diff(allTrialTimes)); %
             end
             if numel(Trials{TTLchanNum}.end)<numel(Trials{TTLchanNum}.start)
                 if diff([numel(Trials{TTLchanNum}.end),numel(Trials{TTLchanNum}.start)])==1
-                    Trials{TTLchanNum}.end(end+1)=Trials{TTLchanNum}.end(end)+Trials{TTLchanNum}.interval(end);
+                    Trials{TTLchanNum}.end(end+1)=Trials{TTLchanNum}.end(end)+...
+                        Trials{TTLchanNum}.interval(end);
                 else %problem
                     return
                 end
@@ -117,10 +137,12 @@ for TTLchanNum=1:numel(Trials)
         if ~isempty(Trials{TTLchanNum}.interval)
             Trials{TTLchanNum}.interval(:,2)=Trials{TTLchanNum}.interval./(Trials{TTLchanNum}.samplingRate{1}/Trials{TTLchanNum}.samplingRate{2});
         end
+        
     else
         Trials{TTLchanNum}.start=[];
         Trials{TTLchanNum}.end=[];
         Trials{TTLchanNum}.interval=[];
+    end
     end
 end
 

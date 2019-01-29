@@ -1,4 +1,5 @@
 function videoFrameTimes=ReadVideoFrameTimes(recordingName,dirName)
+% read video frame times from Bonsai csv file
 currentDir=cd; 
 switch nargin
     case 0

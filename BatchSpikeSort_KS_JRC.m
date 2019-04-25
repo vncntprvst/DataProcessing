@@ -2,10 +2,10 @@
 % go to data session's root directory
 rootDir=cd;
 [dataFiles,allRecInfo]=BatchExport;
+save('fileInfo','dataFiles','allRecInfo');
 % then move to spike sorting folder
 %cd(fullfile(rootDir,'SpikeSortingFolder'));
 for fileNum=1:size(dataFiles,1)
-    
     %% get recording's info
     recInfo = allRecInfo{fileNum}; %[recordingName '_recInfo'];
     %% create configuration file for KiloSort

@@ -59,7 +59,7 @@ end
 for TTLchanNum=1:numel(Trials)
     pulseDur=mode(diff(Trials{TTLchanNum}.TTL_times)./...
             (Trials{TTLchanNum}.samplingRate{1}/1000));
-    if pulseDur==1 && TTLchanNum>1  % video sync signal, not trials or stim
+    if pulseDur==1 && TTL_channels(TTLchanNum)>1  % video sync signal, not trials or stim
         Trials{TTLchanNum}=[Trials{TTLchanNum}.TTL_times';...
             int32(TTLch_edge{TTLchanNum}')];
     else

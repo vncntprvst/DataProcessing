@@ -16,7 +16,10 @@ end
 
 if exist('option','var') & ~contains(option,'UMS')
     %options: 'low' | 'bandpass' | 'high' | 'stop'
-    [coeffB,coeffA] = butter(3,threshold/(samplingRate/2),option);
+    threshold = threshold/(samplingRate/2); 
+%   [N, Wn] = buttord( threshold, threshold .* [.5 1.5], 3, 20); 
+%   [coeffB,coeffA] = butter(N,Wn);
+    [coeffB,coeffA] = butter(3,threshold,option);
     filtTrace= filtfilt(coeffB, coeffA, data);
 %     for chNm=1:size(data,1)
 %         filtTrace(chNm,:)= filtfilt(coeffb, coeffa, data(chNm,:));

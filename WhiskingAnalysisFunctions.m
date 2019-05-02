@@ -21,11 +21,28 @@ classdef WhiskingAnalysisFunctions
                 % peakWhiskingIdx=find(peakWhisking_ms==max(peakWhisking_ms));
                 % whiskingPeriod=peakWhiskingIdx-5000:peakWhiskingIdx+4999; %in ms
             end
-        end        
-        function whiskingPeriodIdx=FindWhiskingPeriods(periodBehavData)
-            whiskingPeriodIdx=[0 abs(diff(periodBehavData(1,:)))>=3*mad(diff(periodBehavData(1,:)))] &...
-                abs(periodBehavData(1,:))>=3*mad(periodBehavData(1,:));
-            whiskingPeriodIdx=movsum(whiskingPeriodIdx,500)>0;
+        end
+        function [whiskingPeriodIdx,wAmplitude,setPoint]=FindWhiskingPeriods(whiskerTraces,whiskingPhase,minDur)
+            %             whiskingPeriodIdx=[0 abs(diff(periodBehavData(1,:)))>=3*mad(diff(periodBehavData(1,:)))] &...
+            %                 abs(periodBehavData(1,:))>=3*mad(periodBehavData(1,:));
+            %             whiskingPeriodIdx=movsum(whiskingPeriodIdx,500)>0;
+            % Use function from J. Aljadeff, B.J. Lansdell, A.L. Fairhall and D. Kleinfeld (2016) Neuron, 91
+            % link to manuscript: http://dx.doi.org/10.1016/j.neuron.2016.05.039
+            % define functions and variables
+            SetPoint_Fun =  @(x) (max(x) + min (x)) / 2'; % function describing the setpoint location
+            Amp_Fun  = @range ; % function describing the magnitude of amplitude
+            ampThreshold = 10 ;  % (degrees) threshold on whisker position amplitude above which that part of a recording is taken to be a whisking bout
+            ampSmoothFiltParam = 0.005 ; % parameter for amplitude smoothing filter such that whisking bout 'cutouts' are not too short
+            % get values
+            wAmplitude = get_slow_var(whiskerTraces,whiskingPhase,Amp_Fun);
+            setPoint = get_slow_var(whiskerTraces,whiskingPhase,SetPoint_Fun);
+            ampFilter = filtfilt(ampSmoothFiltParam, [1 ampSmoothFiltParam-1],wAmplitude) ;            % filtered amplitude variable
+            whiskingPeriodIdx = logical(heaviside(ampFilter-ampThreshold)); 
+            if nargin==3 %remove periods shorter than minimum duration
+                whiskBoutList = bwconncomp(whiskingPeriodIdx) ;
+                properWhiskBoutIdx=cellfun(@(wBout) numel(wBout)>=minDur, whiskBoutList.PixelIdxList);
+                whiskingPeriodIdx(vertcat(whiskBoutList.PixelIdxList{~properWhiskBoutIdx}))=false;
+            end           
         end
         %% Filter periodic behavior traces
         function LP_periodBehavData_ms=LowPassBehavData(periodBehavData,samplingRate)
@@ -43,9 +60,9 @@ classdef WhiskingAnalysisFunctions
         end
         function BP_periodBehavData_ms=BandPassBehavData(periodBehavData,samplingRate,threshold)
             if nargin==1
-                samplingRate=1000; threshold=[4 25];
+                samplingRate=1000; threshold=[4 20];
             elseif nargin==2
-                threshold=[4 25];
+                threshold=[4 20];
             end
             for whiskerTraceNum=1:size(periodBehavData,1)
                 BP_periodBehavData_ms(whiskerTraceNum,:)=...
@@ -67,22 +84,22 @@ classdef WhiskingAnalysisFunctions
             end
         end
         %% Calculate Phase
-        function [whiskingPhase_ms,protractionIdx,retractionIdx]=ComputePhase(periodBehavData,whiskingPeriodIdx)  
+        function [whiskingPhase_ms,protractionIdx,retractionIdx]=ComputePhase(periodBehavData,whiskingPeriodIdx)
             % See Hill et al. 2011
             if nargin==1 %% compute phase over whole trace
                 whiskingPeriodIdx=ones(1,size(periodBehavData,2));
             end
-            [whiskingPhase_ms,protractionIdx,retractionIdx]=deal(nan(size(periodBehavData))); 
-            for whiskerTraceNum=1:size(periodBehavData,1)                         
+            [whiskingPhase_ms,protractionIdx,retractionIdx]=deal(nan(size(periodBehavData)));
+            for whiskerTraceNum=1:size(periodBehavData,1)
                 % Hilbert transform NEEDS ANGLE TO BE ZERO CENTERED !
                 angleTrace=periodBehavData(whiskerTraceNum,:)-...
                     mean(periodBehavData(whiskerTraceNum,:));
                 % convert to radian if needed
-                if max(abs(angleTrace))>pi 
+                if max(abs(angleTrace))>pi
                     angleTrace=angleTrace*pi/180;
                 end
                 % Hilbert transform
-%                 HTangleTrace=hilbert(angleTrace); % doesn't work as expected
+                %                 HTangleTrace=hilbert(angleTrace); % doesn't work as expected
                 % compute Fourier transform
                 fftTrace=fft(angleTrace);
                 % set power at negative frequencies to zero
@@ -96,18 +113,18 @@ classdef WhiskingAnalysisFunctions
                 retractionIdx(whiskerTraceNum,:)=whiskingPhase_ms(whiskerTraceNum,:)>0;
             end
             whiskingPhase_ms(:,~whiskingPeriodIdx)=nan;
-%             figure; hold on; whiskerTraceNum=1;
-%             plot(periodBehavData(whiskerTraceNum,1:100000))
-% %             plot(whiskingPeriodIdx(whiskerTraceNum,1:100000))
-%             plot(whiskingPhase_ms(whiskerTraceNum,1:100000))
-%             plot(1:100000,zeros(1,100000),'--k')
-%             protractionAngle=periodBehavData(whiskerTraceNum,:)*pi/180; 
-%             protractionAngle(~protractionIdx(whiskerTraceNum,:))=NaN;
-%             plot(protractionAngle(whiskerTraceNum,1:100000),'k')
-%             retractionAngle=periodBehavData(whiskerTraceNum,:)*pi/180;  
-%             retractionAngle(~retractionIdx(whiskerTraceNum,:))=NaN;
-%             plot(retractionAngle(whiskerTraceNum,1:100000),'r')
-        end        
+            %             figure; hold on; whiskerTraceNum=1;
+            %             plot(periodBehavData(whiskerTraceNum,1:100000))
+            % %             plot(whiskingPeriodIdx(whiskerTraceNum,1:100000))
+            %             plot(whiskingPhase_ms(whiskerTraceNum,1:100000))
+            %             plot(1:100000,zeros(1,100000),'--k')
+            %             protractionAngle=periodBehavData(whiskerTraceNum,:)*pi/180;
+            %             protractionAngle(~protractionIdx(whiskerTraceNum,:))=NaN;
+            %             plot(protractionAngle(whiskerTraceNum,1:100000),'k')
+            %             retractionAngle=periodBehavData(whiskerTraceNum,:)*pi/180;
+            %             retractionAngle(~retractionIdx(whiskerTraceNum,:))=NaN;
+            %             plot(retractionAngle(whiskerTraceNum,1:100000),'r')
+        end
         %% Find instantaneous frequency
         function instantFreq_ms=ComputeInstFreq(periodBehavData)
             Nfft = 1024;

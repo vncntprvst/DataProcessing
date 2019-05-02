@@ -62,7 +62,11 @@ classdef EphysFunctions
             spikeRasters_ms=zeros(unitNum,ceil(traceLength));
             for clusterNum=1:unitNum
                 unitIdx=unitID==unitList(clusterNum);
-                lengthUnitTimeArray=ceil(spikeTimes(find(unitIdx,1,'last'))/int32(samplingRate/1000));
+                try
+                    lengthUnitTimeArray=ceil(spikeTimes(find(unitIdx,1,'last'))/int32(samplingRate/1000));
+                catch
+                    lengthUnitTimeArray=ceil(spikeTimes(find(unitIdx,1,'last'))/int64(samplingRate/1000));
+                end
                 spikeRasters_ms(clusterNum,1:lengthUnitTimeArray)=...
                     EphysFunctions.DownSampleToMilliseconds(...
                     spikeTimes(unitIdx),binSize,samplingRate);          

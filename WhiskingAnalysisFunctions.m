@@ -22,7 +22,7 @@ classdef WhiskingAnalysisFunctions
                 % whiskingPeriod=peakWhiskingIdx-5000:peakWhiskingIdx+4999; %in ms
             end
         end
-        function [whiskingPeriodIdx,wAmplitude,setPoint]=FindWhiskingPeriods(whiskerTraces,whiskingPhase,minDur)
+        function [whiskingEpochsIdx,wAmplitude,setPoint]=FindWhiskingEpochs(whiskerTraces,whiskingPhase,minDur)
             %             whiskingPeriodIdx=[0 abs(diff(periodBehavData(1,:)))>=3*mad(diff(periodBehavData(1,:)))] &...
             %                 abs(periodBehavData(1,:))>=3*mad(periodBehavData(1,:));
             %             whiskingPeriodIdx=movsum(whiskingPeriodIdx,500)>0;
@@ -37,11 +37,11 @@ classdef WhiskingAnalysisFunctions
             wAmplitude = get_slow_var(whiskerTraces,whiskingPhase,Amp_Fun);
             setPoint = get_slow_var(whiskerTraces,whiskingPhase,SetPoint_Fun);
             ampFilter = filtfilt(ampSmoothFiltParam, [1 ampSmoothFiltParam-1],wAmplitude) ;            % filtered amplitude variable
-            whiskingPeriodIdx = logical(heaviside(ampFilter-ampThreshold)); 
+            whiskingEpochsIdx = logical(heaviside(ampFilter-ampThreshold)); 
             if nargin==3 %remove periods shorter than minimum duration
-                whiskBoutList = bwconncomp(whiskingPeriodIdx) ;
+                whiskBoutList = bwconncomp(whiskingEpochsIdx) ;
                 properWhiskBoutIdx=cellfun(@(wBout) numel(wBout)>=minDur, whiskBoutList.PixelIdxList);
-                whiskingPeriodIdx(vertcat(whiskBoutList.PixelIdxList{~properWhiskBoutIdx}))=false;
+                whiskingEpochsIdx(vertcat(whiskBoutList.PixelIdxList{~properWhiskBoutIdx}))=false;
             end           
         end
         %% Filter periodic behavior traces

@@ -102,7 +102,7 @@ classdef EphysFunctions
             width = linspace(-size / 2, size / 2, size);
             gaussFilter = exp(-width .^ 2 / (2 * sigma ^ 2));
             gaussFilter = gaussFilter / sum (gaussFilter); % normalize
-            
+%             gaussFilter(x<0)=0; % causal kernel
             convTrace = conv (data, gaussFilter, 'same');
         end
         function [rasterYInd_ms, rasterXInd_ms]=FindRasterIndices(spikeRasters_ms,unitNum)

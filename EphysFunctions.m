@@ -1,6 +1,9 @@
 classdef EphysFunctions
     methods(Static)
-        function bestUnits=FindBestUnits(unitIDs)
+        function bestUnits=FindBestUnits(unitIDs,pctThreshold)
+            if nargin<2
+                pctThreshold=5; %default 5% threshold
+            end
             %% Find best units
             unitIDs=double(unitIDs);
             % find most frequent units
@@ -9,7 +12,7 @@ classdef EphysFunctions
             [unitFreq,freqIdx]=sort(unitFreq(keepUnits),'descend');
             uniqueUnitIDs=uniqueUnitIDs(freqIdx);
             unitFreq=unitFreq./sum(unitFreq)*100; 
-            bestUnitsIdx=find(unitFreq>5);
+            bestUnitsIdx=unitFreq>pctThreshold;
             bestUnits=uniqueUnitIDs(bestUnitsIdx); bestUnits=sort(bestUnits);
         end
         function [spikes,recordingTraces,keepTraces]=KeepBestUnits(bestUnits,spikes,allTraces)
@@ -99,7 +102,7 @@ classdef EphysFunctions
             width = linspace(-size / 2, size / 2, size);
             gaussFilter = exp(-width .^ 2 / (2 * sigma ^ 2));
             gaussFilter = gaussFilter / sum (gaussFilter); % normalize
-            
+%             gaussFilter(x<0)=0; % causal kernel
             convTrace = conv (data, gaussFilter, 'same');
         end
         function [rasterYInd_ms, rasterXInd_ms]=FindRasterIndices(spikeRasters_ms,unitNum)

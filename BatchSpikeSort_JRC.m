@@ -139,9 +139,13 @@ for fileNum=1:size(dataFiles,1)
         else
             voltRange=0.0082;
         end
-        
+        if isfield(recInfo,'channelMapping')
+           nChans= numel(recInfo.channelMapping);
+        elseif isfield(recInfo,'probeLayout')
+            nChans= size(recInfo.probeLayout,1);
+        end
         fileID = fopen([exportFileName(1:end-4) '.meta'],'w');
-        fprintf(fileID,'nChans = %d\r',numel(recInfo.channelMapping));
+        fprintf(fileID,'nChans = %d\r',nChans);
         fprintf(fileID,'sampleRate = %d\r',30000);
         fprintf(fileID,'bitScaling = %1.3f\r',allRecInfo{fileNum}.bitResolution );
         fprintf(fileID,'rangeMax = %d\r',voltRange);
@@ -151,17 +155,8 @@ for fileNum=1:size(dataFiles,1)
         fprintf(fileID,'dataType = %s\r', 'int16');
         fprintf(fileID,'probe_file = %s\r', probeFileName(1:end-4));
         fprintf(fileID,'paramDlg = %d\r',0); 
-        fprintf(fileID,'advancedParam = %s\r', 'No'); 
-        fclose(fileID);
-        
-        
-        
-        %         fprintf(fileID,'oeSampRate = %d\r',oeSampRate );
-        %         fprintf(fileID,'nSavedChans = %d\r',nSavedChans );
-        %         fprintf(fileID,'oeAiRangeMax = %1.3f\r',oeAiRangeMax );
-        %         fprintf(fileID,'oeAiRangeMin = %1.3f\r',oeAiRangeMin );
-        %         fprintf(fileID,'oeroTbl = %d, %d\r',oeroTbl );
-        %         fclose(fileID);
+        fprintf(fileID,'advancedParam = %s\r', 'Yes'); 
+        fclose(fileID);      
         
         %% make parameter file
         % set parameters (e.g., name of TTL file), to edit params file
@@ -170,10 +165,13 @@ for fileNum=1:size(dataFiles,1)
         trialFile = cellfun(@(fileFormat) dir([cd filesep fileFormat]),...
             {'*.csv'},'UniformOutput', false);
         if isempty(trialFile{:})
-            inputParams=[];
+            inputParams={'CARMode','''median''';...
+                'qqFactor','4';};
         else
             trialFile=trialFile{1}.name;
-            inputParams={'trialFile',['''' trialFile ''''];...
+            inputParams={'CARMode','''median''';...
+                'qqFactor','4';...
+                'trialFile',['''' trialFile ''''];...
                 'psthTimeLimits','[-0.2, 0.2]';...% [-1, 5]; % Time range to display PSTH (in seconds)
                 'psthTimeBin','0.001'; ... %0.01;% Time bin for the PSTH histogram (in seconds)
                 'psthXTick','0.01';... % 0.2;			% PSTH time tick mark spacing
@@ -193,7 +191,7 @@ for fileNum=1:size(dataFiles,1)
     cd ..
 end
 fclose(batchFileID);
-% cd ..
+cd ..
 %% run JRClust on batch file
 clearvars -except fileNum; clearvars -global; % if more crashes on Linux, start Matlab with software opengl (./matlab -softwareopengl)
 upDirs=regexp(cd,['(?<=\' filesep ').+?(?=\' filesep ')'],'match');

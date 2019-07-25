@@ -1,0 +1,27 @@
+var v24%; 'Spike shape dialog
+var v23%; 'View created by FileOpen()
+var v11%;
+var ch1%; 'Channel for New WaveMark
+var ch%[2];   ' for channel specifications
+FileConvert$("Z:\\all_staff\\Wenxi\\prv single unit recodings\\WX008_23apr19\\WX008_23apr19_all.bin", "Z:\\all_staff\\Wenxi\\prv single unit recodings\\WX008_23apr19\\WX008_23apr19_all.SMR", 2);
+v23%:=FileOpen("Z:\\all_staff\\Wenxi\\prv single unit recodings\\WX008_23apr19\\WX008_23apr19_all.SMR",0,3);
+WindowVisible(3);
+WindowVisible(2);
+v24% := SSOpen(2, 1); 'Open New Wavemark spike shape dialog
+Window(39.125, 5.89888,81.375, 62.0787);
+SSTempDelete(); 'Delete all templates
+SSButton(4, 1); 'Track cursor 0: 1=yes, 0=no
+SSButton(7, 1); 'Make templates: 1=yes, 0=no
+SSRun(2); 'Full speed
+if View(ViewLink()).ChanList(ch%, 128) > 0 then 'If unused channels
+    ch1% := ch%[1];                 'use first
+    SSClassify(0, ch1%, 6);         'Create new WaveMark channel
+endif;
+FileClose();
+ExportChanList(1); 'Initialise the channel list
+ExportChanList(0, 4764.71ch1%);
+FileSaveAs("Z:\\all_staff\\Wenxi\\prv single unit recodings\\WX008_23apr19\\WX008_23apr19_all.mat",100,0,"",0,
+"UseSName=1|UseCName=0|WaveTimes=1|BinFreq=0|BinTimes=0|WaveData=1|MarkAs=1|TMarkAs=2|RMarkAs=2|RMarkData=2|WaveMarkAs=2|WaveMarkData=2|Compatability=0"); 'Export (string args)
+FileClose();
+WindowVisible(3);
+View(v23%).Window(9.75, 14.6067,88.625, 82.9588);

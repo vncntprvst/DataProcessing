@@ -29,7 +29,9 @@ for fileNum=1:size(dataFiles,1)
     end
     JRCprobesDir=dir(fullfile(jrclust.utils.basedir(), 'probes'));
     JRCprobesNames={JRCprobesDir.name};
-    JRCProbe=cellfun(@(x) contains(x,[probeFileName(1:end-10) '.prb']),JRCprobesNames );
+    JRCProbe=cellfun(@(x) contains(x,...
+        replace(regexp(probeFileName,'\w+(?=Probe)','match','once'),'_','')),...
+        JRCprobesNames );
     
     if logical(sum(JRCProbe))
         %copy it
@@ -43,7 +45,7 @@ for fileNum=1:size(dataFiles,1)
         flnm=fieldnames(probeLayout);
         recInfo.probeLayout=probeLayout.(flnm{1});
         remapped=false;
-        probeParams.probeFileName=regexp(probeFileName,'\w+(?=_Probe)','match','once');
+        probeParams.probeFileName=replace(regexp(probeFileName,'\w+(?=Probe)','match','once'),'_','');
         probeParams.numChannels=numel({recInfo.probeLayout.Electrode}); %or check recInfo.signals.channelInfo.channelName %number of channels
         probeParams.pads=[15 15];% Dimensions of the recording pad (height by width in micrometers).
         probeParams.maxSite=4; % Max number of sites to consider for merging
@@ -142,7 +144,9 @@ for fileNum=1:size(dataFiles,1)
         if isfield(recInfo,'channelMapping')
            nChans= numel(recInfo.channelMapping);
         elseif isfield(recInfo,'probeLayout')
-            nChans= size(recInfo.probeLayout,1);
+           nChans= size(recInfo.probeLayout,1);
+        elseif isfield(recInfo,'numRecChan')
+           nChans=recInfo.numRecChan;
         end
         fileID = fopen([exportFileName(1:end-4) '.meta'],'w');
         fprintf(fileID,'nChans = %d\r',nChans);
@@ -191,7 +195,7 @@ for fileNum=1:size(dataFiles,1)
     cd ..
 end
 fclose(batchFileID);
-cd ..
+% cd ..
 %% run JRClust on batch file
 clearvars -except fileNum; clearvars -global; % if more crashes on Linux, start Matlab with software opengl (./matlab -softwareopengl)
 upDirs=regexp(cd,['(?<=\' filesep ').+?(?=\' filesep ')'],'match');
@@ -207,4 +211,7 @@ for fileNum=1:size(prmFiles,1)
     jrc('detect-sort',prmFiles{fileNum});
 end
 
-% jrc('manual',prmFiles{5});
+jrc('manual',prmFiles{end-2});
+
+jrc('manual',fullfile(cd,'vIRt41_0815_5300_10Hz_10ms_20mW',...
+    ['vIRt41_0815_5300_10Hz_10ms_20mW' '_export.prm']))

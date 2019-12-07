@@ -57,6 +57,7 @@ end
 % Trials.TTL_times=Trials.TTL_times(diff([0;TTL_ID])>0);
 % TTL sequence (in ms)
 for TTLchanNum=1:numel(Trials)
+    Trials{TTLchanNum}.TTLChannel=TTL_channels(TTLchanNum);
     pulseDur=mode(diff(Trials{TTLchanNum}.TTL_times)./...
             (Trials{TTLchanNum}.samplingRate{1}/1000));
     if pulseDur==1 && TTL_channels(TTLchanNum)>1  % video sync signal, not trials or stim

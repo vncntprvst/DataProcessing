@@ -47,9 +47,16 @@ for fileNum=1:size(dataFiles,1)
         remapped=false;
         probeParams.probeFileName=replace(regexp(probeFileName,'\w+(?=Probe)','match','once'),'_','');
         probeParams.numChannels=numel({recInfo.probeLayout.Electrode}); %or check recInfo.signals.channelInfo.channelName %number of channels
-        probeParams.pads=[15 15];% Dimensions of the recording pad (height by width in micrometers).
+        if sum(~cellfun(@isempty, cellfun(@(pattern)...
+                strfind(probeParams.probeFileName,pattern),...
+                {'cnt','CNT'},'UniformOutput',false)))
+            probeParams.pads=[11 15]; % Dimensions of the recording pad (height by width in micrometers).
+        else
+            probeParams.pads=[11 15];
+        end
         probeParams.maxSite=4; % Max number of sites to consider for merging
         if isfield(recInfo,'probeLayout')
+            % Channel map
             if remapped==true
                 probeParams.chanMap=1:probeParams.numChannels;
             else
@@ -58,6 +65,16 @@ for fileNum=1:size(dataFiles,1)
                         probeParams.chanMap=[recInfo.probeLayout.OEChannel];
                     case 'Blackrock'
                         probeParams.chanMap=[recInfo.probeLayout.BlackrockChannel];
+                end
+            end
+            
+            if max(probeParams.chanMap)>probeParams.numChannels 
+                if  numel(probeParams.chanMap)==probeParams.numChannels 
+                    %fine, just need adjusting channel numbers
+                    [~,probeParams.chanMap]=sort(probeParams.chanMap);
+                    [~,probeParams.chanMap]=sort(probeParams.chanMap);
+                else
+                    disp('There''s an issue with the channel map')
                 end
             end
             
@@ -172,7 +189,8 @@ for fileNum=1:size(dataFiles,1)
             inputParams={'CARMode','''median''';...
                 'qqFactor','4';};
         else
-            trialFile=trialFile{1}.name;
+            trialFile=fullfile(trialFile{1}.folder,trialFile{1}.name);
+            trialFile=strrep(trialFile,filesep,[filesep filesep]);
             inputParams={'CARMode','''median''';...
                 'qqFactor','4';...
                 'trialFile',['''' trialFile ''''];...
@@ -183,9 +201,7 @@ for fileNum=1:size(dataFiles,1)
         end
         [paramFStatus,cmdout]=GenerateJRCParamFile(exportFileName,...
             probeFileName,inputParams);
-        
-        %edit param file to include sync file
-        
+
         %% save prm file name to batch list
         fprintf(batchFileID,'%s\r',fullfile(cd,...
             [exportFileName(1:end-3) 'prm']));
@@ -211,7 +227,7 @@ for fileNum=1:size(prmFiles,1)
     jrc('detect-sort',prmFiles{fileNum});
 end
 
-jrc('manual',prmFiles{end-2});
-
-jrc('manual',fullfile(cd,'vIRt41_0815_5300_10Hz_10ms_20mW',...
-    ['vIRt41_0815_5300_10Hz_10ms_20mW' '_export.prm']))
+% jrc('manual',prmFiles{5});
+% 
+% jrc('manual',fullfile(cd,'vIRt41_0815_5300_10Hz_10ms_20mW',...
+%     ['vIRt41_0815_5300_10Hz_10ms_20mW' '_export.prm']))

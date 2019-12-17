@@ -128,7 +128,8 @@ for fileNum=1:size(dataFiles,1)
         % find data and probe files
         dirListing=dir(cd);
         exportFileName=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,'export.bin'),...
-            {dirListing.name},'UniformOutput',false))).name;
+            {dirListing.name},'UniformOutput',false))).name; 
+        exportFileName=exportFileName(1:end-4);
         probeFileName=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,'.prb'),...
             {dirListing.name},'UniformOutput',false))).name;
         
@@ -165,7 +166,7 @@ for fileNum=1:size(dataFiles,1)
         elseif isfield(recInfo,'numRecChan')
            nChans=recInfo.numRecChan;
         end
-        fileID = fopen([exportFileName(1:end-4) '.meta'],'w');
+        fileID = fopen([exportFileName '.meta'],'w');
         fprintf(fileID,'nChans = %d\r',nChans);
         fprintf(fileID,'sampleRate = %d\r',30000);
         fprintf(fileID,'bitScaling = %1.3f\r',allRecInfo{fileNum}.bitResolution );
@@ -199,13 +200,10 @@ for fileNum=1:size(dataFiles,1)
                 'psthXTick','0.01';... % 0.2;			% PSTH time tick mark spacing
                 'nSmooth_ms_psth','10'}; % 50;			% PSTH smoothing time window (in milliseconds)
         end
-        [paramFStatus,cmdout]=GenerateJRCParamFile(exportFileName,...
-            probeFileName,inputParams);
+        [paramFStatus,cmdout]=ModifyJRCParamFile(exportFileName,true,inputParams);
 
         %% save prm file name to batch list
-        fprintf(batchFileID,'%s\r',fullfile(cd,...
-            [exportFileName(1:end-3) 'prm']));
-        
+        fprintf(batchFileID,'%s\r',fullfile(cd,[exportFileName '.prm']));
     end
     % go back to root dir
     cd ..
@@ -231,3 +229,7 @@ end
 % 
 % jrc('manual',fullfile(cd,'vIRt41_0815_5300_10Hz_10ms_20mW',...
 %     ['vIRt41_0815_5300_10Hz_10ms_20mW' '_export.prm']))
+
+jrc 'manual' 'vIRt44_1210_5100_export.prm' 
+
+vIRt44_1210_5100_export.prm

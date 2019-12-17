@@ -45,11 +45,11 @@ classdef WhiskingAnalysisFunctions
             end           
         end
         %% Filter periodic behavior traces
-        function LP_periodBehavData_ms=LowPassBehavData(periodBehavData,samplingRate)
+        function LP_periodBehavData_ms=LowPassBehavData(periodBehavData,samplingRate,threshold)
             if nargin==1
                 samplingRate=1000;
             elseif nargin==2
-                threshold=0.3;
+                threshold=20;
             end
             for whiskerTraceNum=1:size(periodBehavData,1)
                 LP_periodBehavData_ms(whiskerTraceNum,:)=...
@@ -71,7 +71,7 @@ classdef WhiskingAnalysisFunctions
                 % plot(periodBehavData_ms(whiskerTraceNum,:)-mean(periodBehavData_ms(whiskerTraceNum,:))); plot(BP_periodBehavData_ms(whiskerTraceNum,:),'LineWidth',1)
             end
         end
-        function HP_periodBehavData_ms=HighPassBehavData(periodBehavData,samplingRate)
+        function HP_periodBehavData_ms=HighPassBehavData(periodBehavData,samplingRate,threshold)
             if nargin==1
                 samplingRate=1000;
             elseif nargin==2

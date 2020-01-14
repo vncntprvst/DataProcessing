@@ -4,7 +4,7 @@ rootDir=cd;
 [dataFiles,allRecInfo]=BatchExport;
 save('fileInfo','dataFiles','allRecInfo');
 % then move to spike sorting folder
-%cd(fullfile(rootDir,'SpikeSortingFolder'));
+%cd(fullfile(rootDir,'SpikeSorting'));
 for fileNum=1:size(dataFiles,1)
     %% get recording's info
     recInfo = allRecInfo{fileNum}; %[recordingName '_recInfo'];

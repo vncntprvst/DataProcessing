@@ -170,15 +170,15 @@ classdef EphysFun
         %% PlotRaster
         %%%%%%%%%%%%%
         function PlotRaster(spikeRasters,plotType,plotShift,plotCmap)
-            if nargin<4; plotCmap='k'; end
-            if nargin<3; plotShift = 0; end
-            if nargin<2; plotType='diamonds'; end
+            if nargin<4 || isempty(plotCmap); plotCmap='k'; end
+            if nargin<3 || isempty(plotShift); plotShift = 0; end
+            if nargin<2 || isempty(plotType); plotType='diamonds'; end
             switch plotType
                 case 'bars' %(pretty heavy on memory)
                     %find row and column coordinates of spikes
                     [indy, indx] = ind2sub(size(spikeRasters),find(spikeRasters));
                     % plot rasters
-                    plot(gca,[indx;indx],[indy;indy+1]+shift,'color',plotCmap,'LineStyle','-');
+                    plot(gca,[indx;indx],[indy;indy+1]+plotShift,'color',plotCmap,'LineStyle','-');
                 case 'diamonds'
                     plot(gca,find(spikeRasters),...
                         ones(1,numel(find(spikeRasters)))*...

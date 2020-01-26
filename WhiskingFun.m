@@ -71,16 +71,16 @@ classdef WhiskingFun
                 % whiskingPeriod=peakWhiskingIdx-5000:peakWhiskingIdx+4999; %in ms
             end
         end
-                
+        
         %% GetAmplitude
         %%%%%%%%%%%%%%%
         function wAmplitude=GetAmplitude(wTraces,wPhase)
             % Use function from J. Aljadeff, B.J. Lansdell, A.L. Fairhall and D. Kleinfeld (2016) Neuron, 91
             % link to manuscript: http://dx.doi.org/10.1016/j.neuron.2016.05.039
-                % define functions
-                Amp_Fun  = @range ; % function describing the magnitude of amplitude
-                % get values
-                wAmplitude = WhiskingFun.FindExtrema(wTraces,wPhase,Amp_Fun);
+            % define functions
+            Amp_Fun  = @range ; % function describing the magnitude of amplitude
+            % get values
+            wAmplitude = WhiskingFun.FindExtrema(wTraces,wPhase,Amp_Fun);
         end
         
         %% GetSetPoint
@@ -88,27 +88,27 @@ classdef WhiskingFun
         function setPoint=GetSetPoint(wTraces,wPhase)
             % Use function from J. Aljadeff, B.J. Lansdell, A.L. Fairhall and D. Kleinfeld (2016) Neuron, 91
             % link to manuscript: http://dx.doi.org/10.1016/j.neuron.2016.05.039
-                % define functions
-                SetPoint_Fun =  @(x) (max(x) + min (x)) / 2'; % function describing the setpoint location
-                % get values
-                setPoint = WhiskingFun.FindExtrema(wTraces,wPhase,SetPoint_Fun);
+            % define functions
+            SetPoint_Fun =  @(x) (max(x) + min (x)) / 2'; % function describing the setpoint location
+            % get values
+            setPoint = WhiskingFun.FindExtrema(wTraces,wPhase,SetPoint_Fun);
         end
         
         %% FindExtrema
         %%%%%%%%%%%%%%
         function [interpSig, peakIdx, troughIdx] = FindExtrema(whiskerTrace, whiskerPhase, operation)
-        % Use the phase (p) to find the turning points of the whisks (tops and
-        % bottoms), and calculate a value on each consecutive whisk using the
-        % function handle (operation, e.g. for amplitude, Amp_Fun  = @range)
-        % The values are calculated twice per whisk cycle using both 
-        % bottom-to-bottom and top-to-top.  The values are linearly 
-        % interpolated between whisks.
-        % From Primer code > get_slow_var
-        % https://github.com/NeuroInfoPrimer/primer.git
+            % Use the phase (p) to find the turning points of the whisks (tops and
+            % bottoms), and calculate a value on each consecutive whisk using the
+            % function handle (operation, e.g. for amplitude, Amp_Fun  = @range)
+            % The values are calculated twice per whisk cycle using both
+            % bottom-to-bottom and top-to-top.  The values are linearly
+            % interpolated between whisks.
+            % From Primer code > get_slow_var
+            % https://github.com/NeuroInfoPrimer/primer.git
             % find crossings
             peakIdx = find(whiskerPhase(1:end-1)<0 & whiskerPhase(2:end)>=0);
             troughIdx = find(whiskerPhase(1:end-1)>=pi/2 & whiskerPhase(2:end)<=-pi/2);
-
+            
             % evaluate at transitions
             temp = []; pos = [];
             for valNum = 2:length(peakIdx)
@@ -141,7 +141,7 @@ classdef WhiskingFun
             for valNum = 2:length(pos)
                 in = pos(valNum-1):pos(valNum);
                 interpSig(in) = linspace( temp(valNum-1), temp(valNum), length(in) );
-            end   
+            end
         end
         
         %% Compute Phase
@@ -244,7 +244,7 @@ classdef WhiskingFun
         %% FindWhiskingEpochs
         %%%%%%%%%%%%%%%%%%%%%
         function whiskingEpochsIdx=FindWhiskingEpochs(wAmplitude,wFrequency,...
-                                        ampThreshold,freqThreshold,minDur)
+                ampThreshold,freqThreshold,minDur)
             if nargin<5; minDur=100; end
             if nargin<4; freqThreshold=1; end
             if nargin<3; ampThreshold=2.5; end % (degrees)
@@ -255,7 +255,7 @@ classdef WhiskingFun
             ampEpochsIdx = logical(heaviside(ampFilter-ampThreshold));
             % threshold by frequency
             freqEpochsIdx = wFrequency>freqThreshold;
-            whiskingEpochsIdx = ampEpochsIdx & freqEpochsIdx;
+            whiskingEpochsIdx = ampEpochsIdx; %& freqEpochsIdx;
             if exist('minDur','var') %remove periods shorter than minimum duration
                 whiskBoutList = bwconncomp(whiskingEpochsIdx) ;
                 properWhiskBoutIdx=cellfun(@(wBout) numel(wBout)>=minDur, whiskBoutList.PixelIdxList);
@@ -265,31 +265,64 @@ classdef WhiskingFun
         
         %% FindWhiskingModes
         %%%%%%%%%%%%%%%%%%%
-        function whiskingEpochsIdx=FindWhiskingModes(wAmplitude,wFrequency,thdParams)
+        function wMode=FindWhiskingModes(wAngle,wVelocity,wAmplitude,wFrequency,wSetPoint,samplingRate,whiskingEpochsIdx)
             % For whisking modes definition, see Berg and Kleinfeld 2003 (in rat)
             % https://physiology.org/doi/full/10.1152/jn.00600.2002
-        % if thresholds are specified, need to be structure with values for each mode
-            if nargin==2
-                thdParams(1).type='foveal';thdParams(2).type='exploratory';thdParams(3).type='twitching';
-                thdParams(1).amp=2.5;thdParams(2).amp=10;thdParams(3).amp=2.5;
-                thdParams(1).freq=15;thdParams(2).freq=5;thdParams(3).freq=1; % Expl.: 5–15 Hz. Foveal 15–25 Hz
-                thdParams(1).dur=500;thdParams(2).dur=500;thdParams(3).dur=100;
+            % Four main modes:
+            % foveal: high frequency > 10Hz, medium amplitude >25 <35, high setpoint/angular values >70 at start of whisk
+            % exploratory: lower frequency < 10, high amplitude >35, medium setpoint/angular values ?
+            % resting: lower frequency < 10Hz, low/medium amplitude <25, low setpoint/angular values <60
+            % twiches: high frequency > 25Hz, low amplitude <10, low setpoint/angular values <70 at start of whisk
+            whiskingMode={'hf_foveal';'mf_foveal';'exploratory';'resting';'twitching'};
+            wMode=struct('type',[],'ampThd',[],'freqThd',[],'setPoint',[],'durThd',[],'index',false(1,length(wAmplitude)));
+            isNanIdx=isnan(wAngle) | isnan(wVelocity) | isnan(wAmplitude) | isnan(wFrequency) | isnan(wSetPoint);
+            wAngle=wAngle(~isNanIdx); wVelocity=wVelocity(~isNanIdx); wAmplitude=wAmplitude(~isNanIdx); wFrequency=wFrequency(~isNanIdx); wSetPoint=wSetPoint(~isNanIdx);
+            if nargin<6; samplingRate =1000; end
+            if nargin<7
+                %                     smoothFiltParam = 0.005 ; % parameter for amplitude smoothing filter such that whisking bout 'cutouts' are not too short
+                %                     ampFilter = filtfilt(smoothFiltParam, [1 smoothFiltParam-1],wAmplitude) ; % filtered amplitude variable
+                %                     ampEpochsIdx = logical(heaviside(ampFilter-wMode(wModeN).ampThd(1))); % threshold by amplitude
+                threshold = 4/(samplingRate/2);
+                [coeffB,coeffA] = butter(3,threshold,'low');
+                velFilter = filtfilt(coeffB, coeffA,abs(wVelocity)) ;
+                velEpochsIdx = velFilter>0.2; % threshold by velocity
+                whiskingEpochsIdx = velEpochsIdx; % & ampEpochsIdx;
             end
-            wAmplitude(isnan(wAmplitude))=0;
-            ampSmoothFiltParam = 0.005 ; % parameter for amplitude smoothing filter such that whisking bout 'cutouts' are not too short
-            ampFilter = filtfilt(ampSmoothFiltParam, [1 ampSmoothFiltParam-1],wAmplitude) ; % filtered amplitude variable
-            % threshold by amplitude
-            ampEpochsIdx = logical(heaviside(ampFilter-ampThreshold));
-            % threshold by frequency
-            freqEpochsIdx = wFrequency>freqThreshold;
-            whiskingEpochsIdx = ampEpochsIdx & freqEpochsIdx;
-            if exist('minDur','var') %remove periods shorter than minimum duration
-                whiskBoutList = bwconncomp(whiskingEpochsIdx) ;
-                properWhiskBoutIdx=cellfun(@(wBout) numel(wBout)>=minDur, whiskBoutList.PixelIdxList);
-                whiskingEpochsIdx(vertcat(whiskBoutList.PixelIdxList{~properWhiskBoutIdx}))=false;
+            whiskBoutList = bwconncomp(velEpochsIdx) ; 
+            figure; hold on; plot(wAngle)
+            for wModeN=1:numel(whiskingMode)
+                wMode(wModeN).type=whiskingMode{wModeN};
+                switch wMode(wModeN).type
+                    case 'hf_foveal'
+                        wMode(wModeN).ampThd=[25 35];wMode(wModeN).freqThd=[16 Inf];wMode(wModeN).setPoint=[70 180];wMode(wModeN).durThd=500;
+                    case 'mf_foveal'
+                        wMode(wModeN).ampThd=[25 35];wMode(wModeN).freqThd=[10 16];wMode(wModeN).setPoint=[60 180];wMode(wModeN).durThd=500;
+                    case 'exploratory'
+                        wMode(wModeN).ampThd=[35 Inf];wMode(wModeN).freqThd=[4 10];wMode(wModeN).setPoint=[45 135];wMode(wModeN).durThd=500;
+                    case 'resting'
+                        wMode(wModeN).ampThd=[0 25];wMode(wModeN).freqThd=[0 10];wMode(wModeN).setPoint=[0 60];wMode(wModeN).durThd=500;
+                    case 'twitching'
+                        wMode(wModeN).ampThd=[0 10];wMode(wModeN).freqThd=[25 Inf];wMode(wModeN).setPoint=[0 70];wMode(wModeN).durThd=100;
+                end
+                properWhiskBoutAmpIdx=cellfun(@(wBout) any(wAmplitude(wBout)>=wMode(wModeN).ampThd(1) &...
+                    wAmplitude(wBout)<=wMode(wModeN).ampThd(end)),whiskBoutList.PixelIdxList);
+                properWhiskBoutFreqIdx=cellfun(@(wBout) mean(wFrequency(wBout))>=wMode(wModeN).freqThd(1) &...
+                    mean(wFrequency(wBout))<=wMode(wModeN).freqThd(end),whiskBoutList.PixelIdxList);
+                properWhiskBoutSetPointIdx=cellfun(@(wBout) mean(wSetPoint(wBout))>=wMode(wModeN).setPoint(1) &...
+                    mean(wSetPoint(wBout))<=wMode(wModeN).setPoint(end),whiskBoutList.PixelIdxList);
+                properWhiskBoutDurIdx=cellfun(@(wBout) numel(wBout)>=wMode(wModeN).durThd, whiskBoutList.PixelIdxList);
+                whiskingEpochsIdx = velEpochsIdx;
+                whiskingEpochsIdx(vertcat(whiskBoutList.PixelIdxList{... %~properWhiskBoutAmpIdx}))=false; %...
+                    ~(properWhiskBoutDurIdx & properWhiskBoutAmpIdx &...
+                    properWhiskBoutFreqIdx & properWhiskBoutSetPointIdx)}))=false;
+                wMode(wModeN).index(~isNanIdx)=whiskingEpochsIdx;
+                    whiskModeVals=nan(size(wAngle));
+                    whiskModeVals(wMode(wModeN).index)=wAngle(wMode(wModeN).index);
+                    plot(whiskModeVals);
+
             end
         end
-
+        
         %% Compute spectral coherence
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         

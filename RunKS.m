@@ -1,34 +1,80 @@
-function rez=RunKS(ops,fileName)
+function rez=RunKS(configFileName)
+% see original file master_kilosort.m 
 
-%% run generated config file to create ops
-% e.g., config_vIRt22_2018-10-16_19-11-34_5100_50ms1Hz10mW_nopp
-% see DataExportGUI
+%% [optional] add paths
+% addpath(genpath('V:\Code\SpikeSorting\Kilosort2')) % path to kilosort folder
+% addpath('V:\Code\Tools\npy-matlab') % for converting to Phy
 
-%% Run KiloSort
-[rez, DATA, uproj] = preprocessData(ops); % preprocess data and extract spikes for initialization
-rez                = fitTemplates(rez, DATA, uproj);  % fit templates iteratively
-rez                = fullMPMU(rez, DATA);% extract final spike times (overlapping extraction)
+%% parameters 
+% run generated config file to create ops (see GenerateKSConfigFile) 
+run(configFileName);
+dataDir = ops.exportDir; % the raw data binary file is in this folder
+tempDir = ops.tempDir; % path to temporary binary file (same size as data, should be on fast SSD)
+ops.fproc   = fullfile(tempDir, 'temp_wh.dat'); % proc file on a fast SSD
+chanMapFile = ops.chanMap;
+ops.chanMap = chanMapFile;
 
-%% spk2 add-ons %%
-%% [optional] Auto merge
-rez = merge_posthoc2(rez);
+% is there a channel map file in this folder?
+fs = dir(fullfile(dataDir, '*chan*.mat'));
+if ~isempty(fs)
+    ops.chanMap = fullfile(dataDir, fs(1).name);
+end
+
+if ~isfield(ops,'NchanTOT')
+% load number of channels from channel map
+    ops.NchanTOT = numel(load(ops.chanMap,'chanMap')); % total number of channels in your recording
+end
+
+if ~isfield(ops,'trange')
+    ops.trange = [0 Inf]; % time range to sort
+end
+
+% find the binary file
+if ~isfield(ops,'fbinary')
+    fprintf('Looking for data inside %s \n', dataDir)
+    fs          = [dir(fullfile(dataDir, '*.bin')) dir(fullfile(dataDir, '*.dat'))];
+    ops.fbinary = fullfile(dataDir, fs(1).name);    
+end
+
+%% run KiloSort2
+% preprocess data to create temp_wh.dat
+rez = preprocessDataSub(ops); % preprocess data and extract spikes for initialization
+% [rez, DATA, uproj] = preprocessDataSub(ops); 
+
+% time-reordering as a function of drift
+rez = clusterSingleBatches(rez);
+
+% saving here is a good idea, because the rest can be resumed after loading rez
+save(fullfile(dataDir, 'rez.mat'), 'rez', '-v7.3');
+
+% main tracking and template matching algorithm
+rez = learnAndSolve8b(rez);
+
+% final merges
+rez = find_merges(rez, 1);
+
+% final splits by SVD
+rez = splitAllClusters(rez, 1);
+
+% final splits by amplitudes
+rez = splitAllClusters(rez, 0);
+
+% decide on cutoff
+rez = set_cutoff(rez);
+
+fprintf('found %d good units \n', sum(rez.good>0))
 
 %% [optional] save python results file for Phy
-rezToPhy(rez, cd);
+fprintf('Saving results to Phy  \n')
+rezToPhy(rez, dataDir);
 
-%% save
-save(fullfile(cd,  [fileName '_rez.mat']), 'rez', 'ops', '-v7.3');
+%% save final results
+% discard features in final rez file (too slow to save)
+rez.cProj = [];
+rez.cProjPC = [];
 
-%% run JRClust (kilosort branch)
-% jrc import-ksort /path/to/your/rez.mat sessionName % sessionName is the name typically given to the .prm file 
-
-%% [optional] raw traces filtering  (JRC will filter traces to .bin files)
-% clear rez
-% rawTraces = memmapfile(ops.fbinary,'Format','int16');
-% rawTraces=double(rawTraces.Data); 
-% filtTraces=FilterTrace(rawTraces);
-% fileID = fopen([fileName '_filtered.dat'],'w');
-% fwrite(fileID,filtTraces,'int16');
-% fclose(fileID);
-
+% save final results as rez2
+fprintf('Saving final results in rez2  \n')
+fname = fullfile(dataDir, 'rez2.mat');
+save(fname, 'rez', '-v7.3');
 

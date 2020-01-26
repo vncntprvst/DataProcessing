@@ -15,7 +15,7 @@ for fileNum=1:size(dataFiles,1)
     if isempty(recInfo)
         continue
     end
-    %% create probe and parameter files for JRClust
+    %% create probe file for JRClust
     % load probe file
     %     currentDir=cd;  cd ..
     dirListing = dir(cd);

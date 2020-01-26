@@ -184,12 +184,12 @@ classdef EphysFun
             if nargin<2 || isempty(plotType); plotType='diamonds'; end
             switch plotType
                 case 'lines' 
-                    [indy, indx] = ind2sub(size(spikeRasters),find(spikeRasters));                          % find row and column coordinates of spikes
-                    indy=indy+plotShift;                                                                    % add placement value
-                    if size(indx,2) > size(indx,1); indx=permute(indx,[2 1]); indy=permute(indy,[2 1]); end % need columns
-                    rs_indx=reshape([indx';indx';nan(size(indx'))],1,numel(indx)*3);                        % reshape x indices double them and intersperce with nans
-                    rs_indy=reshape([indy'-1;indy';nan(size(indy'))],1,numel(indx)*3);                      % reshape y indices double them and intersperce with nans
-                    line(rs_indx,rs_indy,'color',plotCmap,'LineWidth',1.2);                                 % plot rasters
+                    [indy, indx] = ind2sub(size(spikeRasters),find(spikeRasters));                      %find row and column coordinates of spikes
+                    indy=indy+plotShift;                                            % add placement value
+                    if size(indx,2) > size(indx,1); indx=permute(indx,[2 1]); indy=permute(indy,[2 1]); end %need columns
+                    rs_indx=reshape([indx';indx';nan(size(indx'))],1,numel(indx)*3); %reshape x indices double them and intersperce with nans
+                    rs_indy=reshape([indy'-1;indy';nan(size(indy'))],1,numel(indx)*3); %reshape y indices double them and intersperce with nans
+                    line(rs_indx,rs_indy,'color',plotCmap,'LineWidth',1.2); % plot rasters
                 case 'bars' %(deprecated - too heavy on memory)
                     %find row and column coordinates of spikes
                     [indy, indx] = ind2sub(size(spikeRasters),find(spikeRasters));

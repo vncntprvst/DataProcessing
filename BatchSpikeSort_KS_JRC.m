@@ -1,10 +1,11 @@
 %% Export .dat files with BatchExport
 % start from data session's root directory
-[dataFiles,allRecInfo]=BatchExport;
-save('fileInfo','dataFiles','allRecInfo');
-
+% [dataFiles,allRecInfo]=BatchExport;
+% save('fileInfo','dataFiles','allRecInfo');
+% 
 %% generate config and channel map files. Create batch file
-% open batch file
+if ~exist('dataFiles','var'); load('fileInfo.mat'); end
+% open batch file to save generated parameter files' name and directory
 upDirs=regexp(cd,['(?<=\' filesep ').+?(?=\' filesep ')'],'match');
 batchFileID = fopen([upDirs{end} '.batch'],'w');
 % loop through all session's recordings
@@ -16,8 +17,8 @@ for fileNum=1:size(dataFiles,1)
     %% create ChannelMap file for KiloSort
     % load probe file
     dirListing = dir(cd);
-%     exportFolder=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,allRecInfo{fileNum}.recordingName),...
-%         {dirListing.name},'UniformOutput',false))).name;
+    %     exportFolder=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,allRecInfo{fileNum}.recordingName),...
+    %         {dirListing.name},'UniformOutput',false))).name;
     try
         probeFileName=dirListing(cellfun(@(x) contains(x,'Probe') ||...
             contains(x,'.prb'),{dirListing(:).name})).name;
@@ -29,6 +30,7 @@ for fileNum=1:size(dataFiles,1)
     recInfo.probeLayout=probeLayout.(flnm{1});
     remapped=false;
     probeParams.probeFileName=replace(regexp(probeFileName,'\w+(?=Probe)','match','once'),'_','');
+    if isempty(probeParams.probeFileName); probeParams.probeFileName=probeFileName; end
     probeParams.numChannels=numel({recInfo.probeLayout.Electrode}); %or check recInfo.signals.channelInfo.channelName %number of channels
     if sum(~cellfun(@isempty, cellfun(@(pattern)...
             strfind(probeParams.probeFileName,pattern),...
@@ -45,11 +47,21 @@ for fileNum=1:size(dataFiles,1)
         else
             switch recInfo.sys
                 case 'OpenEphys'
-                    probeParams.chanMap=[recInfo.probeLayout.OEChannel];
+                    probeParams.chanMap={recInfo.probeLayout.OEChannel};
                 case 'Blackrock'
-                    probeParams.chanMap=[recInfo.probeLayout.BlackrockChannel];
+                    probeParams.chanMap={recInfo.probeLayout.BlackrockChannel};
             end
+            % check for unconnected / bad channels
+            probeParams.connected=~cellfun(@isempty, probeParams.chanMap);
+            probeParams.chanMap=[probeParams.chanMap{:}];
         end
+        probeParams.shanks=[recInfo.probeLayout.Shank];
+        probeParams.shanks=probeParams.shanks(probeParams.connected);
+        % probeParams.shanks=probeParams.shanks(~isnan([recInfo.probeLayout.Shank]));
+        
+        %now adjust
+        probeParams.numChannels=sum(probeParams.connected);
+        probeParams.connected=logical(probeParams.chanMap);
         
         if max(probeParams.chanMap)>probeParams.numChannels
             if  numel(probeParams.chanMap)==probeParams.numChannels
@@ -66,9 +78,7 @@ for fileNum=1:size(dataFiles,1)
         %         to the width dimension and the second column corresponds to the depth
         %         dimension (parallel to the probe shank).
         
-        probeParams.shanks=[recInfo.probeLayout.Shank];
-        probeParams.shanks=probeParams.shanks(~cellfun('isempty',{recInfo.probeLayout.Electrode}) &...
-            ~isnan([recInfo.probeLayout.Shank]));
+        
         if isfield(recInfo.probeLayout,'x_geom')
             xcoords=[recInfo.probeLayout.x_geom];
             ycoords=[recInfo.probeLayout.y_geom];
@@ -97,9 +107,14 @@ for fileNum=1:size(dataFiles,1)
     exportFolder=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,allRecInfo{fileNum}.recordingName),...
         {dirListing.name},'UniformOutput',false))).name;
     cd(exportFolder);
-    % Generate channel map file
-    probeFileName=regexp(probeFileName,'\w+(?=\W)','match','once');
-    [cmdout,status,chMapFName]=GenerateKSChannelMap(probeFileName,cd,probeParams,recInfo.samplingRate);
+    probeParams.probeFileName=regexp(probeFileName,'\w+(?=\W)','match','once');
+
+    % Generate JRClust probe file
+    GenerateJRClustProbeFile(probeParams);
+    
+    % Generate KS channel map file
+    [cmdout,status,chMapFName]=GenerateKSChannelMap(probeParams.probeFileName,...
+        cd,probeParams,recInfo.samplingRate);
     if status~=1
         disp('problem generating the channel map file')
     else
@@ -116,15 +131,58 @@ for fileNum=1:size(dataFiles,1)
         userParams.trange = [0 Inf];
         [status,cmdout,configFName]=GenerateKSConfigFile(recInfo.recordingName,cd,userParams);
         
-        %% save config file name to batch list
+        %% save KS config file name to batch list
         fprintf(batchFileID,'%s\r',fullfile(cd,configFName));
+        
+        %% Generate .meta file (will be used later for import of KS result into JRClust)
+        % find data and probe files
+        dirListing=dir(cd);
+        exportFileName=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,'export.bin'),...
+            {dirListing.name},'UniformOutput',false))).name; 
+        exportFileName=exportFileName(1:end-4);
+        probeFileName=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,'.prb'),...
+            {dirListing.name},'UniformOutput',false))).name;
+        
+        % fill values
+        if contains(allRecInfo{1, 1}.sys,'OpenEphys')
+            voltRange=0.00639;
+        elseif contains(allRecInfo{1, 1}.sys,'BlackRock)')
+            voltRange=0.0082;
+        else
+            voltRange=0.0082;
+        end
+        if isfield(recInfo,'channelMapping')
+            nChans= numel(recInfo.channelMapping);
+        elseif isfield(recInfo,'probeLayout')
+            nChans= size(recInfo.probeLayout,1);
+        elseif isfield(recInfo,'numRecChan')
+            nChans=recInfo.numRecChan;
+        end
+        
+        % create file
+        fileID = fopen([exportFileName '.meta'],'w');
+        fprintf(fileID,'nChans = %d\r',nChans);
+        fprintf(fileID,'sampleRate = %d\r',30000);
+        fprintf(fileID,'bitScaling = %1.3f\r',allRecInfo{fileNum}.bitResolution );
+        fprintf(fileID,'rangeMax = %d\r',voltRange);
+        fprintf(fileID,'rangeMin = %d\r',-voltRange);
+        fprintf(fileID,'adcBits = %d\r',16);
+        fprintf(fileID,'gain = %d\r',1);
+        fprintf(fileID,'dataType = %s\r', 'int16');
+        fprintf(fileID,'probe_file = %s\r', probeFileName(1:end-4));
+        fprintf(fileID,'paramDlg = %d\r',0);
+        fprintf(fileID,'advancedParam = %s\r', 'Yes');
+        fclose(fileID);
+        
     end
     % go back to root dir
     cd ..
 end
 fclose(batchFileID);
-%% Run KiloSort on batch file
 clearvars -except fileNum; clearvars -global; % if more crashes on Linux, start Matlab with software opengl (./matlab -softwareopengl)
+
+%% Run KiloSort on batch file
+% open batch file
 upDirs=regexp(cd,['(?<=\' filesep ').+?(?=\' filesep ')'],'match');
 batchFileID = fopen([upDirs{end} '.batch'],'r');
 delimiter = {''};formatSpec = '%s%[^\n\r]';
@@ -132,20 +190,23 @@ prmFiles = textscan(batchFileID, formatSpec, 'Delimiter', delimiter,...
     'TextType', 'string',  'ReturnOnError', false);
 fclose(batchFileID);
 prmFiles = [prmFiles{1}];
-
+% Run KS2
 for fileNum=1:size(prmFiles,1)
-    RunKS(prmFiles{fileNum});
+    try
+        RunKS(prmFiles{fileNum});
+    catch
+        close all; continue
+    end
+    close all
 end
 
-% for fileNum=1:size(dataFiles,1)
-%     %% get recording's info
-%     recInfo = allRecInfo{fileNum}; %[recordingName '_recInfo'];
-%     cd([recInfo.recordingName])
-%     %% run JRClust (kilosort branch)
-%     % jrc import-ksort /path/to/your/rez.mat sessionName % sessionName is the name typically given to the .prm file
-    eval(['jrc import-ksort ' recInfo.recordingName '_rez.mat ' recInfo.recordingName])
-%     cd ..
-% end
+%% import results into JRC
+if ~exist('dataFiles','var'); load('fileInfo.mat'); end
+for fileNum=1:size(dataFiles,1)
+    recInfo = allRecInfo{fileNum};
+    cd([recInfo.recordingName])
+    jrc('import-ksort',cd,false);
+    cd ..
+end
 
-    eval(['jrc import-ksort ' cd]); %[cd filesep 'rez.mat ']])
 

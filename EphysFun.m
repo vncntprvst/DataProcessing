@@ -161,7 +161,7 @@ classdef EphysFun
             gaussFilter = exp(-width .^ 2 / (2 * sigma ^ 2));
             gaussFilter = gaussFilter / sum (gaussFilter); % normalize
             if causal; gaussFilter(x<0)=0; end % causal kernel
-            convTrace = conv (data, gaussFilter, 'same');
+            convTrace = conv(data, gaussFilter, 'same');
         end
         
         %% FindRasterIndices
@@ -218,7 +218,7 @@ classdef EphysFun
             binSize=1/2;
             for unitNum=numel(selectedUnits)
                 unitST=spikeTimes(unitsIDs==selectedUnits(unitNum));%get unit spike times                
-                unitST=unitST/(samplingRate/1000*binSize);% change to 1/2ms timescale
+                unitST=int32(unitST/(samplingRate/1000*binSize));% change to 1/2ms timescale
                 % ISI=diff(unitST)/(samplingRate/1000);%get ISI
                 
                 %% bin spikes                
@@ -237,9 +237,9 @@ classdef EphysFun
             end
             % axis('tight');
             box off; grid('on'); %set(gca,'yscale','log','GridAlpha',0.25,'MinorGridAlpha',1);
-            xlabel(['Autocorrelogram (' num2str(binSize) ' ms bins)'])
+            xlabel(['Autocorrelogram (ms )']);% num2str(binSize) ' ms bins)']
             set(gca,'xlim',[-25 25]/binSize,... %'ylim',[0 max([max(get(gca,'ylim')) 10^1])]
-                'xtick',-25/binSize:10:25/binSize,'xticklabel',-25:10:25,...
+                'xtick',-25/binSize:10:25/binSize,'xticklabel',-25:10*binSize:25,...
                 'Color','white','FontSize',10,'FontName','Calibri','TickDir','out');
             hold off
         end

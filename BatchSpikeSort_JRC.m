@@ -33,7 +33,7 @@ for fileNum=1:size(dataFiles,1)
         replace(regexp(probeFileName,'\w+(?=Probe)','match','once'),'_','')),...
         JRCprobesNames );
     
-    if logical(sum(JRCProbe))
+    if any(JRCProbe) && ~all(JRCProbe)
         %copy it
         copyfile(fullfile(jrclust.utils.basedir(), 'probes',JRCprobesNames{JRCProbe}),...
             fullfile(cd,exportFolder,JRCprobesNames{JRCProbe}));

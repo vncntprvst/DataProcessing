@@ -1,7 +1,7 @@
 %% Export .dat files with BatchExport
 % start from data session's root directory
-% [dataFiles,allRecInfo]=BatchExport;
-% save('fileInfo','dataFiles','allRecInfo');
+[dataFiles,allRecInfo]=BatchExport;
+save('fileInfo','dataFiles','allRecInfo');
 % 
 %% generate config and channel map files. Create batch file
 if ~exist('dataFiles','var'); load('fileInfo.mat'); end
@@ -21,7 +21,7 @@ for fileNum=1:size(dataFiles,1)
     %         {dirListing.name},'UniformOutput',false))).name;
     try
         probeFileName=dirListing(cellfun(@(x) contains(x,'Probe') ||...
-            contains(x,'.prb'),{dirListing(:).name})).name;
+            contains(x,'.prb') || contains(x,'PSeries'),{dirListing(:).name})).name;
     catch
         % ask where the probe file is
     end

@@ -21,15 +21,29 @@ for fileNum=1:size(dataFiles,1)
     %         {dirListing.name},'UniformOutput',false))).name;
     try
         probeFileName=dirListing(cellfun(@(x) contains(x,'Probe') ||...
-            contains(x,'.prb') || contains(x,'PSeries'),{dirListing(:).name})).name;
+            contains(x,'.prb') || contains(x,'.json'),{dirListing(:).name})).name;
     catch
         % ask where the probe file is
+        filePath  = mfilename('fullpath');
+        filePath = regexp(filePath,['.+(?=\' filesep '.+\' filesep '.+$)'],'match','once'); %removes filename
+        [probeFileName,probePathName] = uigetfile('*.json','Select the probe file',...
+            fullfile(filePath,'DataExport', 'probemaps'));
+        copyfile(fullfile(probePathName,probeFileName),fullfile(cd,probeFileName));
     end
-    probeLayout=load(probeFileName);
-    flnm=fieldnames(probeLayout);
-    recInfo.probeLayout=probeLayout.(flnm{1});
+    if contains(probeFileName,'.json') %|| contains(probeFileName,'.prb')
+        probeLayout = fileread(probeFileName);
+        recInfo.probeLayout = jsondecode(probeLayout);
+    else
+        probeLayout=load(probeFileName);
+        flnm=fieldnames(probeLayout);
+        recInfo.probeLayout=probeLayout.(flnm{1});
+    end
     remapped=false;
-    probeParams.probeFileName=replace(regexp(probeFileName,'\w+(?=Probe)','match','once'),'_','');
+    probeParams.probeFileName=probeFileName(1:end-4);
+    try %non generic probe
+        probeParams.probeFileName=replace(regexp(probeParams.probeFileName,'\w+(?=Probe)','match','once'),'_','');
+    catch
+    end
     if isempty(probeParams.probeFileName); probeParams.probeFileName=probeFileName; end
     probeParams.numChannels=numel({recInfo.probeLayout.Electrode}); %or check recInfo.signals.channelInfo.channelName %number of channels
     if sum(~cellfun(@isempty, cellfun(@(pattern)...
@@ -52,7 +66,11 @@ for fileNum=1:size(dataFiles,1)
                     probeParams.chanMap={recInfo.probeLayout.BlackrockChannel};
             end
             % check for unconnected / bad channels
-            probeParams.connected=~cellfun(@isempty, probeParams.chanMap);
+            if isfield(recInfo.probeLayout,'connected')
+                probeParams.connected=recInfo.probeLayout.connected;
+            else
+                probeParams.connected=~cellfun(@isempty, probeParams.chanMap);  
+            end
             probeParams.chanMap=[probeParams.chanMap{:}];
         end
         probeParams.shanks=[recInfo.probeLayout.Shank];
@@ -79,27 +97,31 @@ for fileNum=1:size(dataFiles,1)
         %         dimension (parallel to the probe shank).
         
         
-        if isfield(recInfo.probeLayout,'x_geom')
-            xcoords=[recInfo.probeLayout.x_geom];
-            ycoords=[recInfo.probeLayout.y_geom];
+        if isfield(recInfo.probeLayout,'geometry')
+            probeParams.geometry=recInfo.probeLayout.geometry;
         else
-            xcoords = zeros(1,probeParams.numChannels);
-            ycoords = 200 * ones(1,probeParams.numChannels);
-            groups=unique(probeParams.shanks);
-            for elGroup=1:length(groups)
-                if isnan(groups(elGroup)) || groups(elGroup)==0
-                    continue;
+            if isfield(recInfo.probeLayout,'x_geom')
+                xcoords=[recInfo.probeLayout.x_geom];
+                ycoords=[recInfo.probeLayout.y_geom];
+            else
+                xcoords = zeros(1,probeParams.numChannels);
+                ycoords = 200 * ones(1,probeParams.numChannels);
+                groups=unique(probeParams.shanks);
+                for elGroup=1:length(groups)
+                    if isnan(groups(elGroup)) || groups(elGroup)==0
+                        continue;
+                    end
+                    groupIdx=find(probeParams.shanks==groups(elGroup));
+                    xcoords(groupIdx(2:2:end))=20;
+                    xcoords(groupIdx)=xcoords(groupIdx)+(0:length(groupIdx)-1);
+                    ycoords(groupIdx)=...
+                        ycoords(groupIdx)*(elGroup-1);
+                    ycoords(groupIdx(round(end/2)+1:end))=...
+                        ycoords(groupIdx(round(end/2)+1:end))+20;
                 end
-                groupIdx=find(probeParams.shanks==groups(elGroup));
-                xcoords(groupIdx(2:2:end))=20;
-                xcoords(groupIdx)=xcoords(groupIdx)+(0:length(groupIdx)-1);
-                ycoords(groupIdx)=...
-                    ycoords(groupIdx)*(elGroup-1);
-                ycoords(groupIdx(round(end/2)+1:end))=...
-                    ycoords(groupIdx(round(end/2)+1:end))+20;
             end
+            probeParams.geometry=[xcoords;ycoords]';
         end
-        probeParams.geometry=[xcoords;ycoords]';
     else
     end
     
@@ -203,10 +225,14 @@ end
 %% import results into JRC
 if ~exist('dataFiles','var'); load('fileInfo.mat'); end
 for fileNum=1:size(dataFiles,1)
+    try
     recInfo = allRecInfo{fileNum};
     cd([recInfo.recordingName])
     jrc('import-ksort',cd,false);
     cd ..
+    catch
+        continue
+    end
 end
 
 

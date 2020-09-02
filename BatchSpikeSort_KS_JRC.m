@@ -2,7 +2,7 @@
 % start from data session's root directory
 [dataFiles,allRecInfo]=BatchExport;
 save('fileInfo','dataFiles','allRecInfo');
-% 
+%
 %% generate config and channel map files. Create batch file
 if ~exist('dataFiles','var'); load('fileInfo.mat'); end
 % open batch file to save generated parameter files' name and directory
@@ -46,15 +46,14 @@ for fileNum=1:size(dataFiles,1)
     end
     if isempty(probeParams.probeFileName); probeParams.probeFileName=probeFileName; end
     probeParams.numChannels=numel({recInfo.probeLayout.Electrode}); %or check recInfo.signals.channelInfo.channelName %number of channels
-    if sum(~cellfun(@isempty, cellfun(@(pattern)...
-            strfind(probeParams.probeFileName,pattern),...
-            {'cnt','CNT'},'UniformOutput',false)))
-        probeParams.pads=[11 15]; % Dimensions of the recording pad (height by width in micrometers).
-    else
-        probeParams.pads=[11 15];
-    end
-    probeParams.maxSite=4; % Max number of sites to consider for merging
+    
     if isfield(recInfo,'probeLayout')
+        if isfield(recInfo.probeLayout,'surfaceDim')
+            probeParams.pads=recInfo.probeLayout.surfaceDim;
+        end
+        if isfield(recInfo.probeLayout,'maxSite')
+            probeParams.maxSite=recInfo.probeLayout.maxSite;
+        end
         % Channel map
         if remapped==true
             probeParams.chanMap=1:probeParams.numChannels;
@@ -67,11 +66,12 @@ for fileNum=1:size(dataFiles,1)
             end
             % check for unconnected / bad channels
             if isfield(recInfo.probeLayout,'connected')
-                probeParams.connected=recInfo.probeLayout.connected;
+                probeParams.connected=logical(recInfo.probeLayout.connected);
+                probeParams.chanMap=probeParams.chanMap{:}(probeParams.connected);
             else
-                probeParams.connected=~cellfun(@isempty, probeParams.chanMap);  
+                probeParams.connected=~cellfun(@isempty, probeParams.chanMap);
+                probeParams.chanMap=[probeParams.chanMap{:}];
             end
-            probeParams.chanMap=[probeParams.chanMap{:}];
         end
         probeParams.shanks=[recInfo.probeLayout.Shank];
         probeParams.shanks=probeParams.shanks(probeParams.connected);
@@ -85,7 +85,7 @@ for fileNum=1:size(dataFiles,1)
             if  numel(probeParams.chanMap)==probeParams.numChannels
                 %fine, just need adjusting channel numbers
                 [~,probeParams.chanMap]=sort(probeParams.chanMap);
-                [~,probeParams.chanMap]=sort(probeParams.chanMap);
+                [~,probeParams.chanMap]=sort(probeParams.chanMap);                
             else
                 disp('There''s an issue with the channel map')
             end
@@ -123,6 +123,16 @@ for fileNum=1:size(dataFiles,1)
             probeParams.geometry=[xcoords;ycoords]';
         end
     else
+        if sum(~cellfun(@isempty, cellfun(@(pattern)...
+                strfind(probeParams.probeFileName,pattern),...
+                {'cnt','CNT'},'UniformOutput',false)))
+            probeParams.pads=[15 11]; % Dimensions of the recording pad (height by width in micrometers).
+        else
+            probeParams.pads=[16 10];
+        end
+        
+        probeParams.maxSite=4; % Max number of sites to consider for merging
+        
     end
     
     %move to export folder
@@ -130,7 +140,7 @@ for fileNum=1:size(dataFiles,1)
         {dirListing.name},'UniformOutput',false))).name;
     cd(exportFolder);
     probeParams.probeFileName=regexp(probeFileName,'\w+(?=\W)','match','once');
-
+    
     % Generate JRClust probe file
     GenerateJRClustProbeFile(probeParams);
     
@@ -160,7 +170,7 @@ for fileNum=1:size(dataFiles,1)
         % find data and probe files
         dirListing=dir(cd);
         exportFileName=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,'export.bin'),...
-            {dirListing.name},'UniformOutput',false))).name; 
+            {dirListing.name},'UniformOutput',false))).name;
         exportFileName=exportFileName(1:end-4);
         probeFileName=dirListing(~cellfun('isempty',cellfun(@(x) strfind(x,'.prb'),...
             {dirListing.name},'UniformOutput',false))).name;
@@ -226,10 +236,10 @@ end
 if ~exist('dataFiles','var'); load('fileInfo.mat'); end
 for fileNum=1:size(dataFiles,1)
     try
-    recInfo = allRecInfo{fileNum};
-    cd([recInfo.recordingName])
-    jrc('import-ksort',cd,false);
-    cd ..
+        recInfo = allRecInfo{fileNum};
+        cd([recInfo.recordingName])
+        jrc('import-ksort',cd,false);
+        cd ..
     catch
         continue
     end

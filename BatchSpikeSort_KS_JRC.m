@@ -184,7 +184,9 @@ for fileNum=1:size(dataFiles,1)
             voltRange=0.0082;
         end
         if isfield(recInfo,'channelMapping')
-            nChans= numel(recInfo.channelMapping);
+            nChans= numel([recInfo.channelMapping]);
+        elseif isfield(recInfo,'chanID')
+            nChans= numel([recInfo.chanID]);
         elseif isfield(recInfo,'probeLayout')
             nChans= size(recInfo.probeLayout,1);
         elseif isfield(recInfo,'numRecChan')
@@ -196,14 +198,17 @@ for fileNum=1:size(dataFiles,1)
         fprintf(fileID,'nChans = %d\r',nChans);
         fprintf(fileID,'sampleRate = %d\r',30000);
         fprintf(fileID,'bitScaling = %1.3f\r',allRecInfo{fileNum}.bitResolution );
-        fprintf(fileID,'rangeMax = %d\r',voltRange);
-        fprintf(fileID,'rangeMin = %d\r',-voltRange);
+        fprintf(fileID,'rangeMax = %1.5f\r',voltRange);
+        fprintf(fileID,'rangeMin = %1.5f\r',-voltRange);
         fprintf(fileID,'adcBits = %d\r',16);
         fprintf(fileID,'gain = %d\r',1);
         fprintf(fileID,'dataType = %s\r', 'int16');
         fprintf(fileID,'probe_file = %s\r', probeFileName(1:end-4));
         fprintf(fileID,'paramDlg = %d\r',0);
         fprintf(fileID,'advancedParam = %s\r', 'Yes');
+        fprintf(fileID,'psthTimeLimits = [%1.2f, %1.2f]\r',-0.1, 0.1);
+        fprintf(fileID,'psthTimeBin = %1.3f\r',0.002);
+        fprintf(fileID,'psthXTick = %1.2f\r',0.1);        
         fclose(fileID);
         
     end
@@ -238,6 +243,7 @@ for fileNum=1:size(dataFiles,1)
     try
         recInfo = allRecInfo{fileNum};
         cd([recInfo.recordingName])
+        jrc('bootstrap',[recInfo.recordingName '_export.meta'],'-noconfirm','-advanced') 
         jrc('import-ksort',cd,false);
         cd ..
     catch

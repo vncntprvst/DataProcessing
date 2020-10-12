@@ -55,7 +55,7 @@ classdef EphysFun
         
         %% MakeRasters
         %%%%%%%%%%%%%%
-        function [spikeRasters,unitList]=MakeRasters(spikeTimes,unitID,samplingRate,traceLength)
+        function [spikeRasters,unitList]=MakeRasters(spikeTimes,unitID,timeUnit,traceLength)
             %% Bin spike counts in 1ms bins
             % with Chronux' binning function
             % foo=binspikes(spikeTimes/double(samplingRate),Fs);
@@ -63,34 +63,40 @@ classdef EphysFun
             % With home-made function. Same result, but takes care of the padding.
             binSize=1;
             if nargin<3
-                samplingRate=30000;
+                timeUnit=30000;
             end
             if nargin<4
-                traceLength=int32(double(max(spikeTimes))/samplingRate*1000);
+                traceLength=int32(double(max(spikeTimes))/timeUnit*1000);
             end
             unitList=unique(unitID); unitList=unitList(unitList>0);
             numUnit=numel(unitList);
             spikeRasters=zeros(numUnit,ceil(traceLength));
             for unitNum=1:numUnit
                 unitIdx=unitID==unitList(unitNum);
-                try
-                    lengthUnitTimeArray=ceil(spikeTimes(find(unitIdx,1,'last'))/int32(samplingRate/1000));
-                catch
-                    lengthUnitTimeArray=ceil(spikeTimes(find(unitIdx,1,'last'))/int64(samplingRate/1000));
+                if contains(class(spikeTimes),'single')
+                    lengthUnitTimeArray=ceil(spikeTimes(find(unitIdx,1,'last'))/single(timeUnit/1000));
+                elseif contains(class(spikeTimes),'int32')
+                    lengthUnitTimeArray=ceil(spikeTimes(find(unitIdx,1,'last'))/int32(timeUnit/1000));
+                elseif contains(class(spikeTimes),'int64')
+                    lengthUnitTimeArray=ceil(spikeTimes(find(unitIdx,1,'last'))/int64(timeUnit/1000));
                 end
-                spikeRasters(unitNum,1:lengthUnitTimeArray)=...
-                    EphysFun.DownSampleToMilliseconds(...
-                    spikeTimes(unitIdx),binSize,samplingRate);
+                rasters=EphysFun.DownSampleToMilliseconds(...
+                    spikeTimes(unitIdx),binSize,timeUnit);
+                spikeRasters(unitNum,1:numel(rasters))=rasters;
             end
         end
         
         %% AlignRasters
         %%%%%%%%%%%%%%%
-        function alignedRasters=AlignRasters(binnedSpikes,eventTimes,preAlignWindow,postAlignWindow)
+        function alignedRasters=AlignRasters(binnedSpikes,eventTimes,preAlignWindow,postAlignWindow,SRratio)
             %% create event aligned rasters 
             if nargin==2 %define time window limits
                 preAlignWindow=100; postAlignWindow=400;
             end
+            if nargin<5; SRratio=1; end %default in milliseconds;
+            eventTimes=int32(eventTimes*SRratio);
+            preAlignWindow=int32(preAlignWindow*SRratio);
+            postAlignWindow=int32(postAlignWindow*SRratio);
             alignedRasters=cell(size(binnedSpikes,1),1);
             for cellNum=1:size(binnedSpikes,1)
                 cellRasters=nan(numel(eventTimes),preAlignWindow+postAlignWindow);
@@ -178,13 +184,15 @@ classdef EphysFun
         
         %% PlotRaster
         %%%%%%%%%%%%%
-        function PlotRaster(spikeRasters,plotType,plotShift,plotCmap)
-            if nargin<4 || isempty(plotCmap); plotCmap='k'; end
-            if nargin<3 || isempty(plotShift); plotShift = 0; end
-            if nargin<2 || isempty(plotType); plotType='diamonds'; end
+        function PlotRaster(spikeRasters,timeStamps,plotType,plotShift,plotCmap)
+            if nargin<5 || isempty(plotCmap); plotCmap='k'; end
+            if nargin<4 || isempty(plotShift); plotShift = 0; end
+            if nargin<3 || isempty(plotType); plotType='diamonds'; end
+            if nargin<2 || isempty(timeStamps); timeStamps=1:size(spikeRasters,2); end
             switch plotType
                 case 'lines' 
                     [indy, indx] = ind2sub(size(spikeRasters),find(spikeRasters));                          % find row and column coordinates of spikes
+                    indx=timeStamps(indx);
                     indy=indy+plotShift;                                                                    % add placement value
                     if size(indx,2) > size(indx,1); indx=permute(indx,[2 1]); indy=permute(indy,[2 1]); end % need columns
                     rs_indx=reshape([indx';indx';nan(size(indx'))],1,numel(indx)*3);                        % reshape x indices double them and intersperce with nans

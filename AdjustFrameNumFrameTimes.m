@@ -1,4 +1,4 @@
-function [whiskerTrackingData,vidTimes]=AdjustFrameNumFrameTimes(whiskerTrackingData,vidTimes)
+function [whiskerTrackingData,vidTimes]=AdjustFrameNumFrameTimes(whiskerTrackingData,vidTimes,unitBase)
 
 % If there are more vSync TTLS than video frames, fix it.
 % Assuming that video recording strictly occured within boundaries of ephys
@@ -17,9 +17,9 @@ else
     wtFld=fieldnames(whiskerTrackingData);
     behavTraceLength=numel(whiskerTrackingData.(wtFld{1}));
 end
-frameNumDiff= behavTraceLength-(numel(vidTimes)*mode(diff(vidTimes)));
+frameNumDiff= behavTraceLength-(numel(vidTimes)*mode(diff(vidTimes))*unitBase);
 if frameNumDiff <0 % more TTLs recorded than video frames (see scenario above)
-    vidTimes=vidTimes(vidTimes<behavTraceLength+vidTimes(1));
+    vidTimes=vidTimes(vidTimes*unitBase<behavTraceLength+vidTimes(1)*unitBase);
 elseif frameNumDiff > 0 % More problematic case
     % Video recording started earlier, or stopped later, than the ephys recording
     % In that case, we need to cut the behavior traces, not the video frame times

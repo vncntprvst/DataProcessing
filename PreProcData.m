@@ -69,8 +69,11 @@ elseif strcmp(filterOption{1},'bandpass')
         filtValues=inputdlg(promptFields,promptName,promptNumlines,promptDefaultanswer);
         filtHP=str2double(filtValues{1});
         filtLP=str2double(filtValues{2});
+     elseif size(filterOption,2)==3
+         filtHP=filterOption{2}(1);
+         filtLP=filterOption{2}(2);
      else
-         filtHP=500;
+         filtHP=600;
          filtLP=6000;
      end
     tic
@@ -79,7 +82,7 @@ elseif strcmp(filterOption{1},'bandpass')
     for chNm=1:size(data,1)
         data(chNm,:)= filtfilt(b, a, data(chNm,:));
     end
-    disp(['bandpass done in ' num2str(toc) 'seconds']);
+    disp(['bandpass done in ' num2str(toc) ' seconds']);
 elseif strcmp(filterOption{1},'movav_sub')
     %% substract moving average
     % mvaData=nans(size(data,1),size(data,2));
@@ -112,7 +115,7 @@ elseif  strcmp(filterOption{1},'CAR')
         [b,a] = butter(3,10000/(samplingRate/2),'low');
     else
         % butterworth band-pass
-        [b,a] = butter(3,[500 10000]/(samplingRate/2),'bandpass');
+        [b,a] = butter(3,[600 6000]/(samplingRate/2),'bandpass');
     end
     for chNm=1:size(data,1)
         data(chNm,:)= filtfilt(b,a,data(chNm,:));

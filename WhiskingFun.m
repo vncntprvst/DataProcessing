@@ -1,6 +1,81 @@
 classdef WhiskingFun
     methods(Static)
         
+        %% get whisker pad coordinates
+        function [wpCoordinates,wpLocation,wpRelativeLocation,sideBrightness] =...
+                GetWhiskerPadCoord(topviewImage)
+            figure('Name','Draw rectangle around whisker pad','NumberTitle','off'); image(topviewImage);
+            set(gcf, 'position', [500   500   size(topviewImage,2) size(topviewImage,1)])
+            wpAttributes = drawrectangle;
+            wpCoordinates = wpAttributes.Position;
+            wpLocation = round([wpCoordinates(1)+wpCoordinates(3)/2,...
+                wpCoordinates(2)+wpCoordinates(4)/2]);
+            wpRelativeLocation = [wpLocation(1)/(size(topviewImage,2)),...
+                wpLocation(2)/size(topviewImage,1)];
+            wPos=round(wpAttributes.Position);
+            wpImage=squeeze(topviewImage(wPos(2):wPos(2)+wPos(4),wPos(1):wPos(1)+wPos(3),1));
+            sideBrightness.top_bottom_ratio=sum(wpImage(1,:))/sum(wpImage(end,:));
+            sideBrightness.left_right_ratio=sum(wpImage(:,1))/sum(wpImage(:,end));
+            close(gcf);
+        end
+        
+        %% get whisker pad parameters
+        function [faceSideInImage,protractionDirection,linkingDirection]=...
+                GetWhiskerPadParams(wpCoordinates,wpRelativeLocation,sideBrightness)
+            switch wpCoordinates(3)/wpCoordinates(4) > 1
+                case true % Horizontal orientaton
+%                     if (wpRelativeLocation(2) > 0.5 && sideBrightness.top_bottom_ratio < 1) ||...
+%                             (wpRelativeLocation(2) < 0.5 && sideBrightness.top_bottom_ratio > 1)
+%                         disp('failed detecting whisker pad orientation')
+%                         return
+%                     end
+                    switch sideBrightness.top_bottom_ratio > 1 %wpRelativeLocation(2) > 0.5
+                        case true
+                            faceSideInImage =  'bottom';
+                        case false
+                            faceSideInImage =  'top';
+                    end
+                    switch sideBrightness.left_right_ratio > 1
+                        case true
+                            protractionDirection = 'leftward';
+                        otherwise
+                            protractionDirection = 'rightward';
+                    end
+                case false % Vertical orientaton
+%                     if (wpRelativeLocation(1) > 0.5 && sideBrightness.left_right_ratio < 1) ||...
+%                             (wpRelativeLocation(1) < 0.5 && sideBrightness.left_right_ratio > 1)
+%                         disp('failed detecting whisker pad orientation')
+%                         return
+%                     end
+                    switch sideBrightness.left_right_ratio > 1 %wpRelativeLocation(1) > 0.5 
+                        case true
+                            faceSideInImage =  'right';
+                        case false
+                            faceSideInImage =  'left';
+                    end
+                    switch sideBrightness.top_bottom_ratio > 1
+                        case true
+                            protractionDirection = 'upward';
+                        otherwise
+                            protractionDirection = 'downward';
+                    end
+            end
+            linkingDirection = 'rostral';
+        end
+        
+        %% Get general whisking parameters
+        function whiskingParams = GetWhiskingParams(topviewImage)
+            [wpCoordinates,wpLocation,wpRelativeLocation,sideBrightness] = WhiskingFun.GetWhiskerPadCoord(topviewImage);
+            [faceSideInImage,protractionDirection,linkingDirection]=WhiskingFun.GetWhiskerPadParams...
+                (wpCoordinates,wpRelativeLocation,sideBrightness);
+            whiskingParams=struct('Coordinates',round(wpCoordinates,2),...
+                'Location',wpLocation,...
+                'RelativeLocation',round(wpRelativeLocation,2),...
+                'FaceSideInImage',faceSideInImage,...
+                'ProtractionDirection',protractionDirection,...
+                'LinkingDirection',linkingDirection);
+        end
+        
         %% Filter whisking traces
         %%%%%%%%%%%%%%%%%%%%%%%%%
         function LP_whiskerTrace=LowPassBehavData(whiskerTrace,samplingRate,threshold)
@@ -288,7 +363,7 @@ classdef WhiskingFun
                 velEpochsIdx = velFilter>0.2; % threshold by velocity
                 whiskingEpochsIdx = velEpochsIdx; % & ampEpochsIdx;
             end
-            whiskBoutList = bwconncomp(velEpochsIdx) ; 
+            whiskBoutList = bwconncomp(velEpochsIdx) ;
             figure; hold on; plot(wAngle)
             for wModeN=1:numel(whiskingMode)
                 wMode(wModeN).type=whiskingMode{wModeN};
@@ -316,10 +391,10 @@ classdef WhiskingFun
                     ~(properWhiskBoutDurIdx & properWhiskBoutAmpIdx &...
                     properWhiskBoutFreqIdx & properWhiskBoutSetPointIdx)}))=false;
                 wMode(wModeN).index(~isNanIdx)=whiskingEpochsIdx;
-                    whiskModeVals=nan(size(wAngle));
-                    whiskModeVals(wMode(wModeN).index)=wAngle(wMode(wModeN).index);
-                    plot(whiskModeVals);
-
+                whiskModeVals=nan(size(wAngle));
+                whiskModeVals(wMode(wModeN).index)=wAngle(wMode(wModeN).index);
+                plot(whiskModeVals);
+                
             end
         end
         

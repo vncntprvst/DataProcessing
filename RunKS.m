@@ -13,6 +13,8 @@ tempDir = ops.tempDir; % path to temporary binary file (same size as data, shoul
 ops.fproc   = fullfile(tempDir, 'temp_wh.dat'); % proc file on a fast SSD
 chanMapFile = ops.chanMap;
 ops.chanMap = chanMapFile;
+ops.AUCsplit = 0.99; % splitting a cluster at the end requires at least this much isolation for each sub-cluster (max = 1)
+ops.minFR = 1/10; % minimum spike rate (Hz), if a cluster falls below this for too long it gets removed
 
 % main parameter changes from Kilosort2 to v2.5
 ops.sig        = 20;  % spatial smoothness constant for registration

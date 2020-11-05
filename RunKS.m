@@ -10,11 +10,11 @@ function rez=RunKS(configFileName)
 run(configFileName);
 dataDir = ops.exportDir; % the raw data binary file is in this folder
 tempDir = ops.tempDir; % path to temporary binary file (same size as data, should be on fast SSD)
-ops.fproc   = fullfile(tempDir, 'temp_wh.dat'); % proc file on a fast SSD
+if ~isfield(ops,'fproc')
+    ops.fproc   = fullfile(tempDir, 'temp_wh.dat'); % proc file on a fast SSD
+end
 chanMapFile = ops.chanMap;
 ops.chanMap = chanMapFile;
-ops.AUCsplit = 0.99; % splitting a cluster at the end requires at least this much isolation for each sub-cluster (max = 1)
-ops.minFR = 1/10; % minimum spike rate (Hz), if a cluster falls below this for too long it gets removed
 
 % main parameter changes from Kilosort2 to v2.5
 ops.sig        = 20;  % spatial smoothness constant for registration
@@ -97,7 +97,21 @@ rez.good = get_good_units(rez);
 
 fprintf('found %d good units \n', sum(rez.good>0))
 
+% copy processed file to main data folder
+if ~isfield(ops,'fileName')
+    ops.fileName=regexp(ops.fproc,['(?<=\' filesep ')\w+?(?=.dat)'],'match','once');
+end
+if ~exist(fullfile(ops.exportDir, [ops.fileName '.dat']),'file')
+    copyfile(ops.fproc, fullfile(ops.exportDir, [ops.fileName '.dat']));
+else
+    % change raw data file name? 
+end
+rez.ops.fproc = fullfile(ops.exportDir, [ops.fileName '.dat']);
+
 %% [optional] save python results file for Phy
+if exist(fullfile(dataDir,'params.py'),'file')
+    delete(fullfile(dataDir,'params.py'))
+end
 fprintf('Saving results to Phy  \n')
 rezToPhy(rez, dataDir);
 

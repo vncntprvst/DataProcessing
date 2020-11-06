@@ -101,11 +101,12 @@ fprintf('found %d good units \n', sum(rez.good>0))
 if ~isfield(ops,'fileName')
     ops.fileName=regexp(ops.fproc,['(?<=\' filesep ')\w+?(?=.dat)'],'match','once');
 end
-if ~exist(fullfile(ops.exportDir, [ops.fileName '.dat']),'file')
-    copyfile(ops.fproc, fullfile(ops.exportDir, [ops.fileName '.dat']));
-else
-    % change raw data file name? 
+outfN=fullfile(ops.exportDir, [ops.fileName '.dat']);
+if exist(outfN,'file')
+    movefile(outfN,[outfN '.raw'])
 end
+movefile(ops.fproc, outfN);
+
 rez.ops.fproc = fullfile(ops.exportDir, [ops.fileName '.dat']);
 
 %% [optional] save python results file for Phy

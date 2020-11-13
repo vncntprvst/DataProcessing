@@ -1,4 +1,4 @@
-function [whiskerTrackingData,vidTimes]=AdjustFrameNumFrameTimes(whiskerTrackingData,vidTimes,unitBase)
+function [wtData,vidTimes]=AdjustFrameNumFrameTimes(wtData,vidTimes,unitBase)
 
 % If there are more vSync TTLS than video frames, fix it.
 % Assuming that video recording strictly occured within boundaries of ephys
@@ -6,16 +6,16 @@ function [whiskerTrackingData,vidTimes]=AdjustFrameNumFrameTimes(whiskerTracking
 % video recording file, with the camera's last TTLs being recorded by the
 % ephys acquisition system, but the corresponding frames not recorded in
 % the video file. Adjust behavior data accordingly
-if isfield(whiskerTrackingData,'Angle')
-    if ~isstruct(whiskerTrackingData.Angle)
-        behavTraceLength=numel(whiskerTrackingData.Angle);
+if isfield(wtData.whiskers,'Angle')
+    if ~isstruct(wtData.whiskers(1).Angle)
+        behavTraceLength=numel(wtData.whiskers(1).Angle);
     else
-        wtFld=fieldnames(whiskerTrackingData.Angle);
-        behavTraceLength=numel(whiskerTrackingData.Angle.(wtFld{1})); %Assuming trace is first field here
+        wtFld=fieldnames(wtData.whiskers(1).Angle);
+        behavTraceLength=numel(wtData.whiskers(1).Angle.(wtFld{1})); %Assuming trace is first field here
     end
 else
-    wtFld=fieldnames(whiskerTrackingData);
-    behavTraceLength=numel(whiskerTrackingData.(wtFld{1}));
+    wtFld=fieldnames(wtData.whiskers);
+    behavTraceLength=numel(wtData.whiskers(1).(wtFld{1}));
 end
 frameNumDiff= behavTraceLength-(numel(vidTimes)*mode(diff(vidTimes))*unitBase);
 if frameNumDiff <0 % more TTLs recorded than video frames (see scenario above)
@@ -34,17 +34,17 @@ elseif frameNumDiff > 0 % More problematic case
         disp('Need to cut behavior trace')
         return
     end
-    if isfield(whiskerTrackingData,'Angle')&& isstruct(whiskerTrackingData.Angle)
-        whiskerTrackingData.Angle.(wtFld{1})=whiskerTrackingData.Angle.(wtFld{1})(reIndex);
-        wtFld=fieldnames(whiskerTrackingData.velocity);
-        whiskerTrackingData.velocity.(wtFld{1})=whiskerTrackingData.velocity.(wtFld{1})(reIndex);
-        wtFld=fieldnames(whiskerTrackingData.phase);
-        whiskerTrackingData.phase.(wtFld{1})=whiskerTrackingData.phase.(wtFld{1})(reIndex);
+    if isfield(wtData.whiskers,'Angle')&& isstruct(wtData.whiskers.Angle)
+        wtData.whiskers.Angle.(wtFld{1})=wtData.whiskers.Angle.(wtFld{1})(reIndex);
+        wtFld=fieldnames(wtData.whiskers.velocity);
+        wtData.whiskers.velocity.(wtFld{1})=wtData.whiskers.velocity.(wtFld{1})(reIndex);
+        wtFld=fieldnames(wtData.whiskers.phase);
+        wtData.whiskers.phase.(wtFld{1})=wtData.whiskers.phase.(wtFld{1})(reIndex);
     else
-        wtFld=fieldnames(whiskerTrackingData);
+        wtFld=fieldnames(wtData.whiskers);
         try
             for fldNum=1:numel(wtFld)
-                whiskerTrackingData.(wtFld{fldNum})=whiskerTrackingData.(wtFld{fldNum})(reIndex);
+                wtData.whiskers.(wtFld{fldNum})=wtData.whiskers.(wtFld{fldNum})(reIndex);
             end
         catch
         end

@@ -1,6 +1,33 @@
 classdef WhiskingFun
     methods(Static)
         
+        %% delineate whisker pad region on first video frame
+        function whiskingParams=DrawWhiskerPadROI(vid)
+            vidFrame = readFrame(vid);
+            figure; image(vidFrame);
+            set(gcf, 'position', [450   571   560   420])
+
+            % Ask if video needs to be split
+            splitUp = questdlg('Do you need to split the video?', ...
+                'Video splitting', 'Yes','No','No');
+            close(gcf);
+            switch splitUp
+                case 'No'
+                    % get whisker pad coordinates
+                    % get whisking parameters
+                    whiskingParams = WhiskingFun.GetWhiskingParams(vidFrame);
+                    %clearvars firstVideo
+                case 'Yes'
+                    midWidth=round(size(vidFrame,2)/2);
+                    % get whisking parameters for left side
+                    leftImage=vidFrame(:,1:midWidth,:);
+                    whiskingParams = WhiskingFun.GetWhiskingParams(leftImage);
+                    % get whisking parameters for right side
+                    rightImage=vidFrame(:,midWidth+1:end,:);
+                    whiskingParams(2) = WhiskingFun.GetWhiskingParams(rightImage);
+            end
+        end
+        
         %% get whisker pad coordinates
         function [wpCoordinates,wpLocation,wpRelativeLocation,sideBrightness] =...
                 GetWhiskerPadCoord(topviewImage)
@@ -74,6 +101,28 @@ classdef WhiskingFun
                 'FaceSideInImage',faceSideInImage,...
                 'ProtractionDirection',protractionDirection,...
                 'LinkingDirection',linkingDirection);
+        end
+        
+        %% Save whisking parameters in json file
+        function SaveWhiskingParams(whiskingParams,trackingDir)
+            str=strrep(jsonencode(whiskingParams),',"',sprintf(',\r\n\t"'));
+            str=regexprep(str,'(?<={)"','\r\n\t"');
+            str=regexprep(str,'"(?=})','"\r\n');
+            fid = fopen(fullfile(trackingDir,'whiskerpad.json'),'w');
+            fprintf(fid,'%s',str);
+            fclose(fid);
+        end
+        
+        %% Exclude objects outside whisker pad
+        function [wData,blacklist]=RestrictToWhiskerPad(wData,whiskerpadCoords)
+            % set exclusion list
+            blacklist = [ wData.follicle_x ] > whiskerpadCoords(1)+whiskerpadCoords(3) | ...
+                [ wData.follicle_x ] < whiskerpadCoords(1) | ...
+                [ wData.follicle_y ] > whiskerpadCoords(2)+whiskerpadCoords(4) | ...
+                [ wData.follicle_y ] < whiskerpadCoords(2);
+            
+            %restrict to whisker pad region
+            wData = wData(~blacklist,:);
         end
         
         %% Filter whisking traces

@@ -1,20 +1,10 @@
 function taggedCells = FindPhototagged(ephysData,pulses)
 
 %% variables
-% fileName=ephysData.recInfo.sessionName; %'vIRt44_1210_5450';
 TTLs.start=pulses.TTLTimes; %(1,:); TTLs.end=pulses.TTLTimes(2,:);
 pulseDur=pulses.duration; %  min(mode(TTLs.end-TTLs.start));
-% IPI=mode(diff(TTLs.start));
-% delay=0.005;
 preAlignWindow=0; %0.050;
 postAlignWindow=0.010;
-% SRR=ephysData.recInfo.SRratio;
-% traceExcerpt.excerptSize=SRR;
-
-% spikeData.selectedUnits=[7,18,24]-1;
-if islogical(ephysData.selectedUnits) %logical array
-    ephysData.selectedUnits=find(ephysData.selectedUnits);
-end
 
 %% compute rasters
 spikeRasters=EphysFun.MakeRasters(ephysData.spikes.times,ephysData.spikes.unitID,...

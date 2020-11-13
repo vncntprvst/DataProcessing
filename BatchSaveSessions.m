@@ -11,9 +11,11 @@ for sessionNum=1:numel(expDirs)
     try
     cd(fullfile(expDirs(sessionNum).folder,expDirs(sessionNum).name));
     SaveProcessedData
-    catch
+    catch ME
         disp(['error saving data from '...
             fullfile(expDirs(sessionNum).folder,expDirs(sessionNum).name)])
+        disp(ME.identifier)
+%       rethrow(ME)
         continue
     end
 end

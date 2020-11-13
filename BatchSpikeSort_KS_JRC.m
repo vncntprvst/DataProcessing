@@ -8,7 +8,7 @@ parentDir=regexp(dataDir,['(?<=\' filesep ').+?(?=\' filesep ')'],'match');
 parentDir = parentDir{end};
 
 %% Export notes
-exportNotes = 1;
+exportNotes = 0;
 if exportNotes
     ExportXPNotes(['Experiment Note Sheet - ' parentDir '.xlsx'] , filepath)
 end
@@ -21,40 +21,41 @@ if exportData
     save('fileInfo','dataFiles','allRecInfo');
 end
 
-%% generate config and channel map files. Create batch file
-cd(fullfile(dataDir,'SpikeSorting'))
-GenerateConfigChannelMap_KS_JRC
-
-%% Run KiloSort on batch file
-% open batch file
-batchFileID = fopen([folderName '.batch'],'r');
-delimiter = {''};formatSpec = '%s%[^\n\r]';
-prmFiles = textscan(batchFileID, formatSpec, 'Delimiter', delimiter,...
-    'TextType', 'string',  'ReturnOnError', false);
-fclose(batchFileID);
-prmFiles = [prmFiles{1}];
-% Run KS2
-for fileNum=1:size(prmFiles,1)
-    try
-        RunKS(prmFiles{fileNum});
-    catch
-        close all; continue
+spikeSort = 0;
+if spikeSort
+    %% generate config and channel map files. Create batch file
+    cd(fullfile(dataDir,'SpikeSorting'))
+    GenerateConfigChannelMap_KS_JRC
+    
+    %% Run KiloSort on batch file
+    % open batch file
+    batchFileID = fopen([folderName '.batch'],'r');
+    delimiter = {''};formatSpec = '%s%[^\n\r]';
+    prmFiles = textscan(batchFileID, formatSpec, 'Delimiter', delimiter,...
+        'TextType', 'string',  'ReturnOnError', false);
+    fclose(batchFileID);
+    prmFiles = [prmFiles{1}];
+    % Run KS2
+    for fileNum=1:size(prmFiles,1)
+        try
+            RunKS(prmFiles{fileNum});
+        catch
+            close all; continue
+        end
+        close all
     end
-    close all
-end
-
-%% import results into JRC
-if ~exist('dataFiles','var'); load('fileInfo.mat'); end
-for fileNum=1:size(dataFiles,1)
-    try
-        recInfo = allRecInfo{fileNum};
-        cd([recInfo.recordingName])
-        jrc('bootstrap',[recInfo.recordingName '_export.meta'],'-noconfirm','-advanced') 
-        jrc('import-ksort',cd,false);
-        cd ..
-    catch
-        continue
+    
+    %% import results into JRC
+    if ~exist('dataFiles','var'); load('fileInfo.mat'); end
+    for fileNum=1:size(dataFiles,1)
+        try
+            recInfo = allRecInfo{fileNum};
+            cd([recInfo.recordingName])
+            jrc('bootstrap',[recInfo.recordingName '_export.meta'],'-noconfirm','-advanced')
+            jrc('import-ksort',cd,false);
+            cd ..
+        catch
+            continue
+        end
     end
 end
-
-

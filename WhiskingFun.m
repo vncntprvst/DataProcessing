@@ -33,16 +33,37 @@ classdef WhiskingFun
                 GetWhiskerPadCoord(topviewImage)
             figure('Name','Draw rectangle around whisker pad','NumberTitle','off'); image(topviewImage);
             set(gcf, 'position', [500   500   size(topviewImage,2) size(topviewImage,1)])
-            wpAttributes = drawrectangle;
-            wpCoordinates = wpAttributes.Position;
-            wpLocation = round([wpCoordinates(1)+wpCoordinates(3)/2,...
-                wpCoordinates(2)+wpCoordinates(4)/2]);
+            wpAttributes = drawrectangle('Label','align',...
+                'LabelVisible','hover','Rotatable',true); %wpAttributes = drawassisted;
+            WaitForROI(wpAttributes);
+            wpPosition = wpAttributes.Position;
+            wpLocation = round([wpPosition(1)+wpPosition(3)/2,...
+                wpPosition(2)+wpPosition(4)/2]);
             wpRelativeLocation = [wpLocation(1)/(size(topviewImage,2)),...
                 wpLocation(2)/size(topviewImage,1)];
-            wPos=round(wpAttributes.Position);
-            wpImage=squeeze(topviewImage(wPos(2):wPos(2)+wPos(4),wPos(1):wPos(1)+wPos(3),1));
+            wpCoordinates=round(wpAttributes.Vertices);
+            
+            %rotate image and ROI 
+            topviewImage_r=imrotate(topviewImage,-wpAttributes.RotationAngle,'bilinear','crop');
+            imageCenter=floor(wpAttributes.Parent.CameraPosition(1:2));
+            center = repmat(imageCenter', 1, size(wpCoordinates,1));
+            theta = deg2rad(wpAttributes.RotationAngle); 
+            rot = [cos(theta) -sin(theta); sin(theta) cos(theta)];
+            wpCoordinates_r= round(rot*(wpCoordinates' - center) + center)';
+%             figure; imshow(topviewImage_r);
+%             patch(wpCoordinates_r(:,1),wpCoordinates_r(:,2),'red','FaceColor','none')
+            
+%           get rotated ROI image
+%           if using position: x,y,width,height
+%             wpImage=squeeze(topviewImage_r(wpCoordinates_r(2):wpCoordinates_r(2)+...
+%                 wpCoordinates_r(4),wpCoordinates_r(1):wpCoordinates_r(1)+wpCoordinates_r(3),1));
+            wpImage=squeeze(topviewImage_r(wpCoordinates_r(1,2):wpCoordinates_r(2,2),...
+                wpCoordinates_r(2,1):wpCoordinates_r(3,1),1));
+            
+            % find brightness ratio for each dimension
             sideBrightness.top_bottom_ratio=sum(wpImage(1,:))/sum(wpImage(end,:));
             sideBrightness.left_right_ratio=sum(wpImage(:,1))/sum(wpImage(:,end));
+     
             close(gcf);
         end
         
@@ -100,7 +121,8 @@ classdef WhiskingFun
                 'RelativeLocation',round(wpRelativeLocation,2),...
                 'FaceSideInImage',faceSideInImage,...
                 'ProtractionDirection',protractionDirection,...
-                'LinkingDirection',linkingDirection);
+                'LinkingDirection',linkingDirection,...
+                'ImageDimensions',size(topviewImage));
         end
         
         %% Save whisking parameters in json file
@@ -108,6 +130,7 @@ classdef WhiskingFun
             str=strrep(jsonencode(whiskingParams),',"',sprintf(',\r\n\t"'));
             str=regexprep(str,'(?<={)"','\r\n\t"');
             str=regexprep(str,'"(?=})','"\r\n');
+            str=regexprep(str,'](?=})',']\r\n');
             fid = fopen(fullfile(trackingDir,'whiskerpad.json'),'w');
             fprintf(fid,'%s',str);
             fclose(fid);

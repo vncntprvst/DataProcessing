@@ -8,7 +8,7 @@ parentDir=regexp(dataDir,['(?<=\' filesep ').+?(?=\' filesep ')'],'match');
 parentDir = parentDir{end};
 
 %% Export notes
-exportNotes = 0;
+exportNotes = 1;
 if exportNotes
     ExportXPNotes(['Experiment Note Sheet - ' parentDir '.xlsx'] , filepath)
 end
@@ -21,7 +21,7 @@ if exportData
     save('fileInfo','dataFiles','allRecInfo');
 end
 
-spikeSort = 0;
+spikeSort = 1;
 if spikeSort
     %% generate config and channel map files. Create batch file
     cd(fullfile(dataDir,'SpikeSorting'))

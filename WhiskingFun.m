@@ -2,7 +2,7 @@ classdef WhiskingFun
     methods(Static)
         
         %% delineate whisker pad region on first video frame
-        function whiskingParams=DrawWhiskerPadROI(vid)
+        function [whiskingParams,splitUp]=DrawWhiskerPadROI(vid)
             vidFrame = readFrame(vid);
             figure; image(vidFrame);
             set(gcf, 'position', [450   571   560   420])
@@ -137,12 +137,20 @@ classdef WhiskingFun
         end
         
         %% Exclude objects outside whisker pad
-        function [wData,blacklist]=RestrictToWhiskerPad(wData,whiskerpadCoords)
+        function [wData,blacklist]=RestrictToWhiskerPad(wData,whiskerpadCoords,ImageDim)
             % set exclusion list
-            blacklist = [ wData.follicle_x ] > whiskerpadCoords(1)+whiskerpadCoords(3) | ...
-                [ wData.follicle_x ] < whiskerpadCoords(1) | ...
-                [ wData.follicle_y ] > whiskerpadCoords(2)+whiskerpadCoords(4) | ...
-                [ wData.follicle_y ] < whiskerpadCoords(2);
+            if numel(whiskerpadCoords)==4 %simple rectangular ROI x, y, width, height
+                blacklist = [ wData.follicle_x ] > whiskerpadCoords(1)+whiskerpadCoords(3) | ...
+                    [ wData.follicle_x ] < whiskerpadCoords(1) | ...
+                    [ wData.follicle_y ] > whiskerpadCoords(2)+whiskerpadCoords(4) | ...
+                    [ wData.follicle_y ] < whiskerpadCoords(2);
+            elseif numel(whiskerpadCoords)>=8 % ROI Vertices (x,y)n
+                wpMask = poly2mask(whiskerpadCoords(:,1),whiskerpadCoords(:,2),ImageDim(1),ImageDim(2));
+%                 figure; imshow(wpMask)
+                follIdx=arrayfun(@(x,y) sub2ind(ImageDim(1:2),round(y),round(x)),...
+                    [wData.follicle_x],[wData.follicle_y]);
+                blacklist=~ismember(follIdx,find(wpMask));
+            end
             
             %restrict to whisker pad region
             wData = wData(~blacklist,:);

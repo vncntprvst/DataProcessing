@@ -1,7 +1,8 @@
 function SaveProcessedData %processedDir
 
-[ephys,behav,pulses]=NeuronBehaviorCorrelation_LoadData;
-cd(fullfile('../../Analysis',ephys.recInfo.sessionName))
+[ephys,behav,pulses,targetDir]=NeuronBehaviorCorrelation_LoadData;
+% cd(fullfile('../../Analysis',ephys.recInfo.sessionName))
+cd(targetDir);
 
 %% whisker data
 whisker=behav.whiskers;
@@ -43,7 +44,7 @@ save([ephys.recInfo.sessionName '_pulses'],'pulses','-v7.3');
 %% other behavior data
 if ~isempty(behav.breathing)
     breathing.data=double(behav.breathing');
-    breathing.data=breathing.data*(range(whisker(bestWhiskerIdx).SetPoint)/range(breathing.data));
+    breathing.data=breathing.data*(range(whisker(bestWhiskerIdx).setPoint)/range(breathing.data));
     breathing.ts=linspace(0,ephys.recInfo.duration_sec,numel(behav.breathing));
     save([ephys.recInfo.sessionName '_breathing'],'breathing','-v7.3');
 end

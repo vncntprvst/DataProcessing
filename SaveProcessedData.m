@@ -34,12 +34,14 @@ ephys.timestamps = 0:0.001:ephys.recInfo.duration_sec;
 traces=single(ephys.traces);
 ephys=rmfield(ephys,'traces');
 
+%% save data
 save([ephys.recInfo.sessionName '_ephys'],'ephys','-v7.3');
 fileID = fopen([ephys.recInfo.sessionName '_traces.bin'],'w');
 fwrite(fileID,traces,'single');
 fclose(fileID);
 save([ephys.recInfo.sessionName '_whisker'],'whisker','-v7.3');
 save([ephys.recInfo.sessionName '_pulses'],'pulses','-v7.3');
+save([ephys.recInfo.sessionName '_processedData'],'ephys','behav','pulses','-v7.3');
 
 %% other behavior data
 if ~isempty(behav.breathing)

@@ -305,21 +305,35 @@ classdef WhiskingFun
         %                       > get_hilbert_transform
         %                       > get_phase
         function [whiskerPhase,whiskerFreq,whiskerAmplitude]=...
-                ComputePhase(whiskerTrace,sampleRate,whiskingPeriodIdx)
-            if nargin<3 %% compute phase over whole trace
-                whiskingPeriodIdx=ones(1,size(whiskerTrace,2));
+                ComputePhase(behavTrace,sampleRate,behavPeriodIdx,signalClass)
+            if nargin<4 || isempty(signalClass)
+                signalClass = 'whisking';
+            end
+            if nargin<3 || isempty(behavPeriodIdx) %% compute phase over whole trace
+                behavPeriodIdx=ones(1,size(behavTrace,2));
             end
             if nargin<2 || isempty(sampleRate)
                 sampleRate=500; %default video acquisition frame rate
             end
-            [whiskerPhase,whiskerFreq,whiskerAmplitude]=deal(nan(size(whiskerTrace)));
-            for whiskerTraceNum=1:size(whiskerTrace,1)
-                % bandpass filter 8 Hz lower to 30 Hz upper
-                bandPassCutOffsInHz = [ 8 30 ];
+            switch signalClass
+                case 'whisking'
+                    % bandpass filter 8 Hz lower to 30 Hz upper
+                    bandPassCutOffsInHz = [ 8,30 ];
+                case 'setpoint'
+                    % bandpass filter 8 Hz lower to 30 Hz upper
+                    bandPassCutOffsInHz = [ 0.1,4 ];
+                case 'breathing'
+                    % bandpass filter 8 Hz lower to 30 Hz upper
+                    bandPassCutOffsInHz = [ 0.05 ,8];
+            end
+                
+            [whiskerPhase,whiskerFreq,whiskerAmplitude]=deal(nan(size(behavTrace)));
+            for whiskerTraceNum=1:size(behavTrace,1)
+                
                 W1 = bandPassCutOffsInHz(1) / (sampleRate/2);
                 W2 = bandPassCutOffsInHz(2) / (sampleRate/2);
                 [ filtVectB, filtVectA ] = butter(2, [ W1 W2 ], 'bandpass');
-                thetaNoNan = MMath.InterpNaN(whiskerTrace);
+                thetaNoNan = MMath.InterpNaN(behavTrace);
                 filteredSignal = filtfilt(filtVectB, filtVectA, thetaNoNan);
                 % Hilbert transform
                 HTangleTrace = hilbert(filteredSignal)';
@@ -328,7 +342,7 @@ classdef WhiskingFun
                 whiskerFreq(whiskerTraceNum,:) = [0 sampleRate/(2*pi)*diff(unwrap(whiskerPhase(whiskerTraceNum,:)))];
                 whiskerAmplitude(whiskerTraceNum,:) = abs(HTangleTrace);
             end
-            whiskerPhase(:,~whiskingPeriodIdx)=nan;
+            whiskerPhase(:,~behavPeriodIdx)=nan;
             % numBins=32; % each bin = pi/16 radians
             % edges = linspace(min(whiskerPhase), max(whiskerPhase), numBins+1);
             % centers = mean([ edges(1:end-1); edges(2:end) ]);

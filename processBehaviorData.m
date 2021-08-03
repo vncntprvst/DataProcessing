@@ -6,7 +6,7 @@ if nargin<3
 end
 Behavior=struct('fileRecordingDate',[],'fileStartTime_ms',[],...
 'trialNumberIdx',[],'trialEventType',[],'successCount',[],...
-    'eventTime_ms',[],'trials',[]);
+    'trialOutcome',[],'eventTime_ms',[],'trials',[]);
 Performance=struct('CorrectSides',[],'gTrialsCumDist',[],...
     'overallPerf',[],'instantPerf',[]);
 
@@ -33,7 +33,7 @@ for fileNum=1:size(fileName,2)
     fileNameSuffix=regexp(fileName{fileNum},'\w+(?=_.+$)','match');
     fileNameSuffix=fileNameSuffix{1};
     try
-        Behavior(fileNum)=readTrialData(fileName{fileNum},'E:\Data\Behav');
+        Behavior(fileNum)=readTrialData(fileName{fileNum},dirName); %'E:\Data\Behav'
     catch
         continue
     end
